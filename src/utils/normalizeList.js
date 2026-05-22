@@ -1,0 +1,1 @@
+export function normalizeList(res) { const data = res?.result ?? res?.data ?? res; if (Array.isArray(data)) return data; if (Array.isArray(data?.content)) return data.content; if (Array.isArray(data?.items)) return data.items; return []; }
