@@ -18,7 +18,7 @@ import CommunityPostDetail from './pages/CommunityPostDetail';
 import Chat from './pages/Chat';
 import MyPage from './pages/MyPage';
 import ExpertRegister from './pages/ExpertRegister';
-import Admin from './pages/Admin';
+import RequestDetail from './pages/RequestDetail';
 
 export default function App() {
   const [user, setUser] = useState(getStoredUser());
@@ -51,7 +51,7 @@ export default function App() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/mypage" element={<MyPage />} />
           <Route path="/expert/register" element={<ExpertRegister />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/requests/:id" element={<RequestDetail />} />
         </Routes>
       </main>
       <Footer />

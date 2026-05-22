@@ -14,7 +14,6 @@ export default function Header({ user, logout }) {
       </Link>
       <nav className={open ? 'site-nav open' : 'site-nav'}>
         {nav.map(([to, label]) => <NavLink key={to} to={to} onClick={close}>{label}</NavLink>)}
-        {user?.role?.includes('ADMIN') && <NavLink to="/admin" onClick={close}>관리자</NavLink>}
       </nav>
       <div className="auth-area">
         {user ? <>

@@ -1,64 +1,235 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Eye, MessageCircle, Paperclip, Send, Trash2 } from 'lucide-react';
 import { api, getStoredUser } from '../api/client';
 import { normalizeList } from '../utils/normalizeList';
 import { Page, Input, FieldArea } from '../components/common';
 
-const API_BASE_URL = 'http://localhost:8080';
-
-function isMine(writerName) {
-  const user = getStoredUser();
-  return !!writerName && (writerName === user?.name || writerName === user?.nickname);
-}
-
-function getFileNameFromUrl(url, index) {
-  if (!url) return `첨부파일 ${index + 1}`;
-
-  const cleanUrl = url.split('?')[0];
-  const lastPart = cleanUrl.split('/').filter(Boolean).pop();
-
-  return lastPart || `첨부파일 ${index + 1}`;
-}
-
-function getFileHref(url) {
-  if (!url) return '#';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${API_BASE_URL}${url.startsWith('/') ? url : `/${url}`}`;
-}
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const BOARD_CACHE_KEY = 'matchingon.community.boardCache';
 
 function getResult(data) {
   return data?.result ?? data?.data?.result ?? data?.data ?? data;
 }
 
+
+function getUploadedFileId(response) {
+  const data = getResult(response);
+  return data?.fileId ?? data?.id ?? data?.fileUploadId ?? data?.uploadFileId ?? null;
+}
+
+function getUploadedStoredName(response) {
+  const data = getResult(response);
+  if (data?.storedName) return data.storedName;
+  const url = data?.fileUrl || data?.url || '';
+  const cleanUrl = url.split('?')[0];
+  const lastPart = cleanUrl.split('/').filter(Boolean).pop();
+  return lastPart || null;
+}
+
+async function uploadFileToServer(file) {
+  if (typeof api.uploadFile === 'function') {
+    return api.uploadFile('COMMUNITY_POST', file);
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const headers = {};
+  const token = localStorage.getItem('accessToken');
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE_URL}/api/files?domain=COMMUNITY_POST`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  let data = null;
+  try { data = await res.json(); } catch {}
+
+  if (!res.ok || data?.isSuccess === false) {
+    throw new Error(data?.message || `파일 업로드 실패: ${res.status}`);
+  }
+
+  return data || { result: null };
+}
+
+async function cleanupUploadedFiles(uploadedFiles) {
+  await Promise.all((uploadedFiles || []).map(async uploaded => {
+    const storedName = getUploadedStoredName(uploaded);
+    if (!storedName) return;
+
+    try {
+      await api.delete(`/api/files/${encodeURIComponent(storedName)}`);
+    } catch {
+      // 글 등록 실패 시 업로드된 임시 파일 삭제를 시도하되, 삭제 실패가 화면 흐름을 막지는 않게 둡니다.
+    }
+  }));
+}
+
+async function uploadCommunityFiles(files) {
+  const uploadedFiles = [];
+  const imageFileIds = [];
+
+  for (const file of files || []) {
+    const uploaded = await uploadFileToServer(file);
+    uploadedFiles.push(uploaded);
+
+    const fileId = getUploadedFileId(uploaded);
+    if (!fileId) {
+      await cleanupUploadedFiles(uploadedFiles);
+      throw new Error('파일 업로드는 됐지만 응답에 fileId가 없어 게시글과 연결할 수 없어요. 백엔드 응답에 fileId가 내려오는지 확인해주세요.');
+    }
+
+    imageFileIds.push(Number(fileId));
+  }
+
+  return { imageFileIds, uploadedFiles };
+}
+
+function getPostId(post) {
+  return post?.postId ?? post?.id ?? post?.communityPostId;
+}
+
+function readBoardCache() {
+  try {
+    return JSON.parse(localStorage.getItem(BOARD_CACHE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function rememberBoard(postId, boardType) {
+  if (!postId || !boardType) return;
+  const cache = readBoardCache();
+  cache[String(postId)] = boardType;
+  localStorage.setItem(BOARD_CACHE_KEY, JSON.stringify(cache));
+}
+
+function getCachedBoard(postId) {
+  return readBoardCache()[String(postId)] || null;
+}
+
+function getRole(user) {
+  return user?.role || user?.userRole || user?.authority || user?.userType || '';
+}
+
+function isMine(writerName) {
+  const user = getStoredUser();
+  const candidates = [user?.name, user?.nickname, user?.displayName].filter(Boolean);
+  return !!writerName && candidates.includes(writerName);
+}
+
+function getFileUrls(post) {
+  if (Array.isArray(post?.imageUrls)) return post.imageUrls;
+  if (Array.isArray(post?.fileUrls)) return post.fileUrls;
+  if (Array.isArray(post?.files)) {
+    return post.files.map(file => file?.fileUrl || file?.url).filter(Boolean);
+  }
+  return [];
+}
+
+function getFileHref(url) {
+  if (!url) return '#';
+  const normalizedUrl = url.replace('/api/files/download/', '/api/files/');
+  if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) return normalizedUrl;
+  return `${API_BASE_URL}${normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`}`;
+}
+
+
+function getStoredNameFromUrl(url) {
+  if (!url) return null;
+  const cleanUrl = url.split('?')[0];
+  const lastPart = cleanUrl.split('/').filter(Boolean).pop();
+  return lastPart ? decodeURIComponent(lastPart) : null;
+}
+
+async function downloadFileWithAuth(url, index) {
+  const href = getFileHref(url);
+  const token = localStorage.getItem('accessToken');
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(href, { headers });
+  if (!res.ok) {
+    throw new Error(`파일 다운로드 실패: ${res.status}`);
+  }
+
+  const blob = await res.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = getFileNameFromUrl(url, index);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(objectUrl);
+}
+
+function getFileNameFromUrl(url, index) {
+  if (!url) return `첨부파일 ${index + 1}`;
+  const cleanUrl = url.split('?')[0];
+  const lastPart = cleanUrl.split('/').filter(Boolean).pop();
+  const decodedName = decodeURIComponent(lastPart || `첨부파일 ${index + 1}`);
+
+  // 백엔드는 저장 파일명을 UUID_원본파일명 형태로 내려주므로 화면에는 원본 파일명만 표시합니다.
+  return decodedName.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/i, '');
+}
+
+function isImageUrl(url) {
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test((url || '').split('?')[0]);
+}
+
 export default function CommunityPostDetail() {
   const { postId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const location = window.history.state?.usr || {};
-  const [post, setPost] = useState(location.post || null);
+
+  const initialPost = location.state?.post || null;
+  const initialBoardType = initialPost?.boardType || getCachedBoard(postId) || 'LIFE';
+
+  const [post, setPost] = useState(initialPost);
   const [comments, setComments] = useState([]);
   const [comment, setComment] = useState('');
   const [editingPost, setEditingPost] = useState(false);
-  const [postForm, setPostForm] = useState({ title: '', content: '', boardType: 'LIFE' });
+  const [postForm, setPostForm] = useState({ title: '', content: '', boardType: initialBoardType });
   const [newFiles, setNewFiles] = useState([]);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [errors, setErrors] = useState({});
   const [msg, setMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [deletingFileUrl, setDeletingFileUrl] = useState(null);
+
+  const titleRef = useRef(null);
+  const contentRef = useRef(null);
+  const fileBoxRef = useRef(null);
+
+  const user = getStoredUser();
+  const role = getRole(user);
+  const isAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN';
+  const boardType = post?.boardType || getCachedBoard(postId) || postForm.boardType || 'LIFE';
+  const writerName = post?.writerName || post?.author;
+  const mine = isMine(writerName) || isAdmin;
+  const imageUrls = useMemo(() => getFileUrls(post), [post]);
 
   const load = async () => {
+    setLoading(true);
     setMsg('');
 
     try {
       const postRes = await api.get(`/api/community/posts/${postId}`);
       const data = getResult(postRes);
+      const nextBoardType = data?.boardType || getCachedBoard(postId) || boardType || 'LIFE';
+      const nextPost = data ? { ...data, boardType: nextBoardType } : null;
 
-      if (data) {
-        setPost(data);
-        setPostForm({
-          title: data.title || '',
-          content: data.content || data.body || '',
-          boardType: data.boardType || postForm.boardType || 'LIFE'
-        });
-      }
+      setPost(nextPost);
+      setPostForm({
+        title: nextPost?.title || '',
+        content: nextPost?.content || nextPost?.body || '',
+        boardType: nextBoardType,
+      });
     } catch (err) {
       setMsg(err.message || '게시글을 불러오지 못했어요.');
     }
@@ -68,6 +239,8 @@ export default function CommunityPostDetail() {
       setComments(normalizeList(commentRes));
     } catch {
       setComments([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,12 +248,33 @@ export default function CommunityPostDetail() {
     load();
   }, [postId]);
 
+  const validatePost = () => {
+    const nextErrors = {};
+
+    if (!postForm.title.trim()) nextErrors.title = '제목을 입력해주세요.';
+    if (!postForm.content.trim()) nextErrors.content = '내용을 입력해주세요.';
+    setErrors(nextErrors);
+
+    if (nextErrors.title) titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else if (nextErrors.content) contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else if (nextErrors.files) fileBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
   const submitComment = async e => {
     e.preventDefault();
+    setMsg('');
+
+    if (!localStorage.getItem('accessToken')) {
+      alert('로그인 후 댓글을 작성할 수 있어요.');
+      return;
+    }
+
     if (!comment.trim()) return;
 
     try {
-      await api.post(`/api/community/posts/${postId}/comments`, { content: comment });
+      await api.post(`/api/community/posts/${postId}/comments`, { content: comment.trim() });
       setComment('');
       await load();
     } catch (err) {
@@ -98,32 +292,63 @@ export default function CommunityPostDetail() {
     e.preventDefault();
     setMsg('');
 
+    if (!validatePost()) return;
+
+    let uploadedFiles = [];
+
     try {
-      const imageFileIds = [];
+      const uploadResult = await uploadCommunityFiles(newFiles);
+      uploadedFiles = uploadResult.uploadedFiles;
 
-      for (const file of newFiles) {
-        const uploadData = await api.uploadFile('COMMUNITY_POST', file);
-        const uploadResult = getResult(uploadData);
-        const fileId = uploadResult?.fileId;
-
-        if (!fileId) {
-          throw new Error('파일 업로드 응답에서 fileId를 찾지 못했어요.');
-        }
-
-        imageFileIds.push(fileId);
-      }
-
-      await api.patch(`/api/community/posts/${postId}`, {
-        ...postForm,
-        imageFileIds
+      const res = await api.patch(`/api/community/posts/${postId}`, {
+        title: postForm.title.trim(),
+        content: postForm.content.trim(),
+        boardType: postForm.boardType || boardType || 'LIFE',
+        imageFileIds: uploadResult.imageFileIds,
       });
+
+      const updated = getResult(res);
+      rememberBoard(getPostId(updated) || postId, postForm.boardType || boardType || 'LIFE');
 
       setNewFiles([]);
       setEditingPost(false);
+      setMsg('게시글이 수정됐어요.');
       await load();
     } catch (err) {
-      console.error(err);
+      if (uploadedFiles.length > 0) await cleanupUploadedFiles(uploadedFiles);
       setMsg(err.message || '게시글 수정에 실패했어요.');
+    }
+  };
+
+  const deleteExistingFile = async url => {
+    const storedName = getStoredNameFromUrl(url);
+    if (!storedName) {
+      setMsg('삭제할 파일 정보를 찾지 못했어요.');
+      return;
+    }
+
+    if (!confirm(`${getFileNameFromUrl(url, 0)} 파일을 삭제할까요?`)) return;
+
+    setDeletingFileUrl(url);
+    setMsg('');
+
+    try {
+      await api.delete(`/api/files/${encodeURIComponent(storedName)}`);
+      setPost(prev => {
+        if (!prev) return prev;
+        const nextUrls = getFileUrls(prev).filter(fileUrl => fileUrl !== url);
+        return {
+          ...prev,
+          imageUrls: nextUrls,
+          fileUrls: nextUrls,
+        };
+      });
+      setMsg('첨부파일이 삭제됐어요.');
+      await load();
+    } catch (err) {
+      setMsg(err.message || '첨부파일 삭제에 실패했어요. 다시 로그인 후 시도해주세요.');
+    } finally {
+      setDeletingFileUrl(null);
     }
   };
 
@@ -140,10 +365,11 @@ export default function CommunityPostDetail() {
 
   const startEditPost = () => {
     setNewFiles([]);
+    setErrors({});
     setPostForm({
       title: post?.title || '',
       content: post?.content || post?.body || '',
-      boardType: post?.boardType || postForm.boardType || 'LIFE'
+      boardType,
     });
     setEditingPost(true);
     setMsg('');
@@ -151,6 +377,7 @@ export default function CommunityPostDetail() {
 
   const cancelEditPost = () => {
     setNewFiles([]);
+    setErrors({});
     setEditingPost(false);
     setMsg('');
   };
@@ -158,11 +385,14 @@ export default function CommunityPostDetail() {
   const startEditComment = c => {
     setEditingCommentId(c.commentId || c.id);
     setEditingCommentContent(c.content || c.body || '');
+    setMsg('');
   };
 
   const updateComment = async commentId => {
+    if (!editingCommentContent.trim()) return;
+
     try {
-      await api.patch(`/api/community/comments/${commentId}`, { content: editingCommentContent });
+      await api.patch(`/api/community/comments/${commentId}`, { content: editingCommentContent.trim() });
       setEditingCommentId(null);
       setEditingCommentContent('');
       await load();
@@ -182,83 +412,86 @@ export default function CommunityPostDetail() {
     }
   };
 
-  const writerName = post?.writerName || post?.author;
-  const mine = isMine(writerName);
-  const imageUrls = Array.isArray(post?.imageUrls) ? post.imageUrls : [];
-
   return (
     <Page
       title="게시글 상세"
       desc="게시글 내용과 댓글을 확인합니다."
       action={
         <button className="btn btn-ghost" onClick={() => navigate('/community')}>
-          목록으로
+          <ArrowLeft size={17} /> 목록으로
         </button>
       }
     >
       {msg && <p className="message">{msg}</p>}
 
-      <div className="post-detail-layout">
-        <article className="panel post-detail-card">
+      <div className="post-detail-layout post-detail-layout-final">
+        <article className="panel post-detail-card post-detail-card-final">
           <div className="post-detail-meta">
-            <span className="badge">{post?.boardType === 'CENTER' ? '공지사항' : '숨고생활'}</span>
-            <small>{writerName || '익명'} · 조회 {post?.viewCount ?? 0}</small>
+            <span className="badge">{boardType === 'CENTER' ? '고수센터' : '숨고생활'}</span>
+            <small>
+              {writerName || '익명'} · <Eye size={13} /> {post?.viewCount ?? 0}
+              {loading ? ' · 불러오는 중...' : ''}
+            </small>
           </div>
 
           {editingPost ? (
             <form className="form" onSubmit={updatePost}>
-              <Input label="제목" value={postForm.title} onChange={v => setPostForm({ ...postForm, title: v })} />
-              <FieldArea label="내용" value={postForm.content} onChange={v => setPostForm({ ...postForm, content: v })} />
+              <Input
+                label="제목"
+                value={postForm.title}
+                onChange={v => setPostForm({ ...postForm, title: v })}
+                error={errors.title}
+                inputRef={titleRef}
+              />
+              <FieldArea
+                label="내용"
+                value={postForm.content}
+                onChange={v => setPostForm({ ...postForm, content: v })}
+                error={errors.content}
+                textareaRef={contentRef}
+              />
 
               {imageUrls.length > 0 && (
                 <div className="attached-file-box">
-                  <h3>기존 첨부파일</h3>
-                  <div className="attached-file-list">
-                    {imageUrls.map((url, index) => (
-                      <a
-                        className="attached-file-link"
-                        key={`${url}-${index}`}
-                        href={getFileHref(url)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        📎 {getFileNameFromUrl(url, index)}
-                      </a>
-                    ))}
-                  </div>
+                  <h3><Paperclip size={17} /> 기존 첨부파일</h3>
+                  <AttachedFiles
+                    files={imageUrls}
+                    canDelete
+                    deletingFileUrl={deletingFileUrl}
+                    onDelete={deleteExistingFile}
+                  />
                   <p className="muted" style={{ marginTop: 8 }}>
-                    기존 첨부파일은 유지되고, 아래에서 선택한 파일은 추가로 첨부됩니다.
+                    삭제하면 해당 파일이 서버에서도 삭제됩니다.
                   </p>
                 </div>
               )}
 
-              <label className="upload-box">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,.pdf,.doc,.docx,.hwp,.txt"
-                  onChange={handleNewFileChange}
-                  hidden
-                />
+              <div ref={fileBoxRef} className={errors.files ? 'field-error' : ''}>
+                <label className="upload-box">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf,.doc,.docx,.hwp,.txt"
+                    onChange={handleNewFileChange}
+                    hidden
+                  />
 
-                <div className="upload-icon">＋</div>
+                  <div className="upload-icon">＋</div>
 
-                <div>
-                  <strong>새 파일 또는 이미지를 추가하세요</strong>
-                  <p>이미지, PDF, 문서 파일을 추가로 선택할 수 있어요.</p>
-                </div>
-              </label>
+                  <div>
+                    <strong>새 첨부파일 선택</strong>
+                    <p>수정 완료를 누르면 파일 업로드 API를 먼저 호출한 뒤 게시글에 연결해요.</p>
+                  </div>
+                </label>
+                {errors.files && <small className="field-error-text">{errors.files}</small>}
+              </div>
 
               {newFiles.length > 0 && (
                 <div className="upload-list">
                   {newFiles.map((file, index) => (
                     <div className="upload-item" key={`${file.name}-${index}`}>
                       <span>📎 {file.name}</span>
-
-                      <button
-                        type="button"
-                        onClick={() => setNewFiles(prev => prev.filter((_, i) => i !== index))}
-                      >
+                      <button type="button" onClick={() => setNewFiles(prev => prev.filter((_, i) => i !== index))}>
                         삭제
                       </button>
                     </div>
@@ -268,53 +501,44 @@ export default function CommunityPostDetail() {
 
               <div className="action-row">
                 <button className="btn btn-primary">수정 완료</button>
-                <button type="button" className="btn btn-ghost" onClick={cancelEditPost}>
-                  취소
-                </button>
+                <button type="button" className="btn btn-ghost" onClick={cancelEditPost}>취소</button>
               </div>
             </form>
           ) : (
             <>
               <h2>{post?.title || '게시글을 불러오는 중입니다.'}</h2>
-              <p>{post?.content || post?.body || '게시글 내용이 없습니다.'}</p>
+              <div className="post-content-body">
+                {post?.content || post?.body || '게시글 내용이 없습니다.'}
+              </div>
 
               {imageUrls.length > 0 && (
                 <div className="attached-file-box">
-                  <h3>첨부파일</h3>
-                  <div className="attached-file-list">
-                    {imageUrls.map((url, index) => (
-                      <a
-                        className="attached-file-link"
-                        key={`${url}-${index}`}
-                        href={getFileHref(url)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        📎 {getFileNameFromUrl(url, index)}
-                      </a>
-                    ))}
-                  </div>
+                  <h3><Paperclip size={17} /> 첨부파일</h3>
+                  <AttachedFiles files={imageUrls} />
                 </div>
               )}
 
               {mine && (
                 <div className="action-row">
                   <button className="btn btn-ghost" onClick={startEditPost}>수정</button>
-                  <button className="btn btn-ghost danger" onClick={deletePost}>삭제</button>
+                  <button className="btn btn-ghost danger" onClick={deletePost}><Trash2 size={16} /> 삭제</button>
                 </div>
               )}
             </>
           )}
         </article>
 
-        <section className="panel comment-panel">
-          <h2>댓글</h2>
+        <section className="panel comment-panel comment-panel-final">
+          <div className="comment-title-row">
+            <h2><MessageCircle size={20} /> 댓글</h2>
+            <span>{comments.length}</span>
+          </div>
 
           <div className="comment-list">
             {comments.length ? comments.map(c => {
               const commentId = c.commentId || c.id;
               const commentWriter = c.writerName || c.author;
-              const commentMine = isMine(commentWriter);
+              const commentMine = isMine(commentWriter) || isAdmin;
 
               return (
                 <div className="comment-item" key={commentId}>
@@ -330,7 +554,11 @@ export default function CommunityPostDetail() {
 
                   {editingCommentId === commentId ? (
                     <div className="comment-edit">
-                      <input value={editingCommentContent} onChange={e => setEditingCommentContent(e.target.value)} />
+                      <input
+                        value={editingCommentContent}
+                        onChange={e => setEditingCommentContent(e.target.value)}
+                        placeholder="댓글을 수정하세요"
+                      />
                       <button className="btn btn-primary" type="button" onClick={() => updateComment(commentId)}>저장</button>
                       <button className="btn btn-ghost" type="button" onClick={() => setEditingCommentId(null)}>취소</button>
                     </div>
@@ -340,16 +568,58 @@ export default function CommunityPostDetail() {
                 </div>
               );
             }) : (
-              <p className="muted">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</p>
+              <div className="comment-empty">
+                <MessageCircle size={28} />
+                <p className="muted">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</p>
+              </div>
             )}
           </div>
 
           <form className="comment-form" onSubmit={submitComment}>
             <input value={comment} onChange={e => setComment(e.target.value)} placeholder="댓글을 입력하세요" />
-            <button className="btn btn-primary">등록</button>
+            <button className="btn btn-primary"><Send size={16} /> 등록</button>
           </form>
         </section>
       </div>
     </Page>
+  );
+}
+
+function AttachedFiles({ files, canDelete = false, deletingFileUrl = null, onDelete }) {
+  const handleDownload = async (url, index) => {
+    try {
+      await downloadFileWithAuth(url, index);
+    } catch (err) {
+      alert(err.message || '파일을 다운로드하지 못했어요. 다시 로그인 후 시도해주세요.');
+    }
+  };
+
+  return (
+    <div className="attached-file-list">
+      {files.map((url, index) => (
+        <div className="attached-file-link" key={`${url}-${index}`} title={getFileNameFromUrl(url, index)}>
+          <span className="attached-file-name">📎 {getFileNameFromUrl(url, index)}</span>
+          <div className="attached-file-actions">
+            <button
+              type="button"
+              className="attached-file-action"
+              onClick={() => handleDownload(url, index)}
+            >
+              다운로드
+            </button>
+            {canDelete && (
+              <button
+                type="button"
+                className="attached-file-action danger"
+                onClick={() => onDelete?.(url)}
+                disabled={deletingFileUrl === url}
+              >
+                {deletingFileUrl === url ? '삭제 중' : '삭제'}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
