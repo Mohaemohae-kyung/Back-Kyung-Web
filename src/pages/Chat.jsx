@@ -442,82 +442,54 @@ export default function Chat() {
 
   }, [connected, currentRoomId]);
 
-  // =========================
-  // 메시지 전송
-  // =========================
-  const send = (e) => {
+    const send = (e) => {
 
-    e.preventDefault();
+      e.preventDefault();
 
-    if (!text.trim()) return;
+      if (!text.trim()) return;
 
-    if (
+      if (
 
-      !clientRef.current ||
+        !clientRef.current ||
 
-      !clientRef.current.connected
-    ) {
+        !clientRef.current.connected
+      ) {
 
-      alert(
-        '웹소켓 연결 안됨'
-      );
+        alert(
+          '웹소켓 연결 안됨'
+        );
 
-      return;
-    }
+        return;
+      }
 
-    const messageText = text;
+      const messageText = text;
 
-    // =========================
-    // 내 화면 즉시 추가
-    // =========================
-    const tempMessage = {
+      // =========================
+      // websocket publish
+      // =========================
+      clientRef.current.publish({
 
-      chatMessageId:
-        Date.now(),
+        destination:
+          '/pub/chat/message',
 
-      senderId:
-        loginUserId,
+        body: JSON.stringify({
 
-      content:
-        messageText,
+          roomId:
+            currentRoomId,
 
-      roomId:
-        currentRoomId
+          senderId:
+            loginUserId,
+
+          type:
+            'TEXT',
+
+          message:
+            messageText
+        })
+      });
+
+      setText('');
     };
-
-    setMessages(prev => [
-
-      ...prev,
-
-      tempMessage
-    ]);
-
-    // =========================
-    // websocket publish
-    // =========================
-    clientRef.current.publish({
-
-      destination:
-        '/pub/chat/message',
-
-      body: JSON.stringify({
-
-        roomId:
-          currentRoomId,
-
-        senderId:
-          loginUserId,
-
-        type:
-          'TEXT',
-
-        message:
-          messageText
-      })
-    });
-
-    setText('');
-  };
 
   // =========================
   // 스크롤

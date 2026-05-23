@@ -14,10 +14,10 @@ const BOARDS = [
 ];
 
 const SORT_OPTIONS = [
-  { id: 'latest', name: '최신순', rawSort: 'p.COMMUNITY_POST_ID DESC' },
-  { id: 'oldest', name: '오래된순', rawSort: 'p.COMMUNITY_POST_ID ASC' },
-  { id: 'views', name: '조회수순', rawSort: 'p.VIEW_COUNT DESC' },
-  { id: 'title', name: '제목순', rawSort: 'p.TITLE ASC' },
+  { id: 'latest', name: '최신순', sort: 'communityPostId,desc' },
+  { id: 'oldest', name: '오래된순', sort: 'communityPostId,asc' },
+  { id: 'views', name: '조회수순', sort: 'viewCount,desc' },
+  { id: 'title', name: '제목순', sort: 'title,asc' },
 ];
 
 function getResult(data) {
@@ -234,8 +234,8 @@ export default function Community() {
       const selectedSort = SORT_OPTIONS.find(option => option.id === sortOption) || SORT_OPTIONS[0];
       const params = new URLSearchParams({ size: '100' });
 
-      if (selectedSort.rawSort) {
-        params.set('rawSort', selectedSort.rawSort);
+      if (selectedSort.sort) {
+        params.set('sort', selectedSort.sort);
       }
 
       const res = await api.get(`/api/community/posts?${params.toString()}`);
