@@ -29,6 +29,7 @@ import Chat from './pages/Chat';
 import MyPage from './pages/MyPage';
 import ExpertRegister from './pages/ExpertRegister';
 import RequestDetail from './pages/RequestDetail';
+import { ChatSocketProvider } from './components/ChatSocketContext';
 
 export default function App() {
 
@@ -55,116 +56,116 @@ export default function App() {
   return (
 
     <BrowserRouter>
+      <ChatSocketProvider>
+        <Header
+          user={user}
+          logout={logout}
+        />
 
-      <Header
-        user={user}
-        logout={logout}
-      />
+        <main>
 
-      <main>
+          <Routes>
 
-        <Routes>
+            {/* 홈 */}
+            <Route
+              path="/"
+              element={<Home />}
+            />
 
-          {/* 홈 */}
-          <Route
-            path="/"
-            element={<Home />}
-          />
+            {/* 로그인 */}
+            <Route
+              path="/login"
+              element={
+                <Login setUser={setUser} />
+              }
+            />
 
-          {/* 로그인 */}
-          <Route
-            path="/login"
-            element={
-              <Login setUser={setUser} />
-            }
-          />
+            {/* 회원가입 */}
+            <Route
+              path="/signup"
+              element={<Signup />}
+            />
 
-          {/* 회원가입 */}
-          <Route
-            path="/signup"
-            element={<Signup />}
-          />
+            {/* 고수찾기 */}
+            <Route
+              path="/experts"
+              element={<Experts />}
+            />
 
-          {/* 고수찾기 */}
-          <Route
-            path="/experts"
-            element={<Experts />}
-          />
+            {/* 고수 상세 */}
+            <Route
+              path="/experts/:serviceId"
+              element={<ExpertDetail />}
+            />
 
-          {/* 고수 상세 */}
-          <Route
-            path="/experts/:serviceId"
-            element={<ExpertDetail />}
-          />
+            {/* 마켓 */}
+            <Route
+              path="/market"
+              element={<Market />}
+            />
 
-          {/* 마켓 */}
-          <Route
-            path="/market"
-            element={<Market />}
-          />
+            {/* 상품 상세 */}
+            <Route
+              path="/store-products/:storeProductId"
+              element={<StoreProductDetail />}
+            />
 
-          {/* 상품 상세 */}
-          <Route
-            path="/store-products/:storeProductId"
-            element={<StoreProductDetail />}
-          />
+            {/* 요청관리 */}
+            <Route
+              path="/requests"
+              element={<Requests />}
+            />
 
-          {/* 요청관리 */}
-          <Route
-            path="/requests"
-            element={<Requests />}
-          />
+            {/* 요청 상세 */}
+            <Route
+              path="/requests/:id"
+              element={<RequestDetail />}
+            />
 
-          {/* 요청 상세 */}
-          <Route
-            path="/requests/:id"
-            element={<RequestDetail />}
-          />
+            {/* 커뮤니티 */}
+            <Route
+              path="/community"
+              element={<Community />}
+            />
 
-          {/* 커뮤니티 */}
-          <Route
-            path="/community"
-            element={<Community />}
-          />
+            {/* 커뮤니티 상세 */}
+            <Route
+              path="/community/posts/:postId"
+              element={<CommunityPostDetail />}
+            />
 
-          {/* 커뮤니티 상세 */}
-          <Route
-            path="/community/posts/:postId"
-            element={<CommunityPostDetail />}
-          />
+            {/* /chat 직접 접근 시 요청관리 이동 */}
+            <Route
+              path="/chat"
+              element={
+                <Navigate to="/requests" />
+              }
+            />
 
-          {/* /chat 직접 접근 시 요청관리 이동 */}
-          <Route
-            path="/chat"
-            element={
-              <Navigate to="/requests" />
-            }
-          />
+            {/* 채팅방 */}
+            <Route
+              path="/chat/:roomId"
+              element={<Chat />}
+            />
 
-          {/* 채팅방 */}
-          <Route
-            path="/chat/:roomId"
-            element={<Chat />}
-          />
+            {/* 마이페이지 */}
+            <Route
+              path="/mypage"
+              element={<MyPage />}
+            />
 
-          {/* 마이페이지 */}
-          <Route
-            path="/mypage"
-            element={<MyPage />}
-          />
+            {/* 고수 등록 */}
+            <Route
+              path="/expert/register"
+              element={<ExpertRegister />}
+            />
 
-          {/* 고수 등록 */}
-          <Route
-            path="/expert/register"
-            element={<ExpertRegister />}
-          />
+          </Routes>
 
-        </Routes>
+        </main>
 
-      </main>
-
-      <Footer />
-
+        <Footer />
+      </ChatSocketProvider>          
     </BrowserRouter>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { useChatSocket } from '../components/ChatSocketContext';
 
 import { api, getStoredUser }
   from '../api/client';
@@ -18,10 +19,14 @@ export default function Requests() {
   const [msg, setMsg] =
     useState('');
 
+  // =========================
+  // 전역 WebSocket Context
+  // =========================
+  const { unreadMap, setUnreadMap } =
+    useChatSocket();
+
   const token =
-    localStorage.getItem(
-      'accessToken'
-    );
+    localStorage.getItem('accessToken');
 
   const user =
     getStoredUser();
@@ -44,24 +49,14 @@ export default function Requests() {
 
         : '/api/service-requests/me';
 
-    console.log(
-      '현재 사용자 ROLE = ',
-      user?.role
-    );
-
-    console.log(
-      '호출 API = ',
-      endpoint
-    );
+    console.log('현재 사용자 ROLE = ', user?.role);
+    console.log('호출 API = ', endpoint);
 
     api.get(endpoint)
 
       .then(res => {
 
-        console.log(
-          '요청 조회 성공',
-          res
-        );
+        console.log('요청 조회 성공', res);
 
         const list =
 
@@ -73,33 +68,22 @@ export default function Requests() {
 
           [];
 
-        console.log(
-          '최종 리스트 = ',
-          list
-        );
+        console.log('최종 리스트 = ', list);
 
         setItems(
-          Array.isArray(list)
-            ? list
-            : []
+          Array.isArray(list) ? list : []
         );
 
         setMsg('');
-
       })
 
       .catch(err => {
 
-        console.error(
-          '요청 조회 실패',
-          err
-        );
+        console.error('요청 조회 실패', err);
 
         setItems([]);
 
-        setMsg(
-          '요청 내역을 불러오지 못했어요.'
-        );
+        setMsg('요청 내역을 불러오지 못했어요.');
       });
 
   }, [token, isExpert]);
@@ -109,10 +93,7 @@ export default function Requests() {
   // =========================
   const open = async item => {
 
-    console.log(
-      '클릭한 요청 = ',
-      item
-    );
+    console.log('클릭한 요청 = ', item);
 
     const canChat =
 
@@ -129,62 +110,47 @@ export default function Requests() {
     // =========================
     // 채팅 가능 상태
     // =========================
-    if (
-      canChat &&
-      item.chatRoomId
-    ) {
+    if (canChat && item.chatRoomId) {
 
       try {
 
-        // =========================
-        // 먼저 읽음 처리
-        // =========================
+        // 읽음 처리
         await api.patch(
-
           `/api/chat/rooms/${item.chatRoomId}/read`
         );
 
         // =========================
-        // 요청관리 알림 제거
+        // items unreadCount 초기화
         // =========================
         setItems(prev =>
 
           prev.map(request => {
 
             if (
-
-              Number(
-                request.chatRoomId
-              ) ===
-
-              Number(
-                item.chatRoomId
-              )
+              Number(request.chatRoomId) ===
+              Number(item.chatRoomId)
             ) {
-
-              return {
-
-                ...request,
-
-                unreadCount: 0
-              };
+              return { ...request, unreadCount: 0 };
             }
 
             return request;
           })
         );
 
+        // =========================
+        // ✅ 전역 unreadMap도 초기화
+        // =========================
+        setUnreadMap(prev => ({
+          ...prev,
+          [item.chatRoomId]: 0
+        }));
+
       } catch (err) {
 
-        console.error(
-          '읽음 처리 실패',
-          err
-        );
+        console.error('읽음 처리 실패', err);
       }
 
-      navigate(
-        `/chat/${item.chatRoomId}`
-      );
+      navigate(`/chat/${item.chatRoomId}`);
 
       return;
     }
@@ -194,11 +160,7 @@ export default function Requests() {
     // =========================
     if (isExpert) {
 
-      navigate(
-        `/requests/${
-          item.requestId || item.id
-        }`
-      );
+      navigate(`/requests/${item.requestId || item.id}`);
 
       return;
     }
@@ -207,15 +169,11 @@ export default function Requests() {
     // 거절 상태
     // =========================
     if (
-
       item.status === 'REJECTED' ||
-
       item.status === '거절됨'
     ) {
 
-      alert(
-        '고수가 요청을 거절했습니다.'
-      );
+      alert('고수가 요청을 거절했습니다.');
 
       return;
     }
@@ -259,7 +217,6 @@ export default function Requests() {
     <Page
       title="요청관리"
       desc={
-
         isExpert
 
           ? '고객에게 받은 견적 요청과 진행 상태를 확인합니다.'
@@ -268,16 +225,7 @@ export default function Requests() {
       }
     >
 
-      {
-        msg && (
-
-          <p className="message">
-
-            {msg}
-
-          </p>
-        )
-      }
+      {msg && <p className="message">{msg}</p>}
 
       <div className="request-list">
 
@@ -286,17 +234,21 @@ export default function Requests() {
 
             items.map((item, i) => {
 
+              // =========================
+              // ✅ unreadMap 실시간 값 우선
+              // =========================
               const unreadCount =
-                item.unreadCount || 0;
+
+                unreadMap[item.chatRoomId] ??
+
+                item.unreadCount ??
+
+                0;
 
               return (
 
                 <button
-                  key={
-                    item.requestId ||
-                    item.id ||
-                    i
-                  }
+                  key={item.requestId || item.id || i}
 
                   className={`request-card ${
                     item.status === 'CHATTING' ||
@@ -312,30 +264,17 @@ export default function Requests() {
                         : ''
                   }`}
 
-                  onClick={() =>
-                    open(item)
-                  }
+                  onClick={() => open(item)}
                 >
 
                   <div>
 
                     <span className="badge">
-
-                      {
-                        item.status ||
-                        '검토중'
-                      }
-
+                      {item.status || '검토중'}
                     </span>
 
                     <h3>
-
-                      {
-                        item.title ||
-                        item.serviceTitle ||
-                        '견적 요청'
-                      }
-
+                      {item.title || item.serviceTitle || '견적 요청'}
                     </h3>
 
                     <p>
@@ -344,44 +283,29 @@ export default function Requests() {
                         isExpert
 
                           ? (
-
                               item.userName ||
-
                               item.requesterName ||
-
                               item.name ||
-
                               '요청 사용자'
                             )
 
                           : (
-
                               item.expertName ||
-
                               item.expertDisplayName ||
-
                               '고수 확인 중'
                             )
                       }
 
                       {' · '}
 
-                      {
-                        item.categoryName ||
-
-                        item.category ||
-
-                        '서비스 협의'
-                      }
+                      {item.categoryName || item.category || '서비스 협의'}
 
                       {' · '}
 
                       {
                         item.createdAt
 
-                          ? String(
-                              item.createdAt
-                            ).slice(0, 10)
+                          ? String(item.createdAt).slice(0, 10)
 
                           : '최근 요청'
                       }
@@ -395,9 +319,7 @@ export default function Requests() {
                       unreadCount > 0 && (
 
                         <div className="request-alert">
-
                           새 메시지 {unreadCount}
-
                         </div>
                       )
                     }
@@ -431,6 +353,7 @@ export default function Requests() {
         }
 
       </div>
+
     </Page>
   );
 }

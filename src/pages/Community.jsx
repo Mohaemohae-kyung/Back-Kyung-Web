@@ -14,16 +14,15 @@ const BOARDS = [
 ];
 
 const SORT_OPTIONS = [
-  { id: 'latest', name: '최신순', sort: 'communityPostId,desc' },
-  { id: 'oldest', name: '오래된순', sort: 'communityPostId,asc' },
-  { id: 'views', name: '조회수순', sort: 'viewCount,desc' },
-  { id: 'title', name: '제목순', sort: 'title,asc' },
+  { id: 'latest',  name: '최신순',   sortColumn: 'postId',    sortDirection: 'DESC' },
+  { id: 'oldest',  name: '오래된순', sortColumn: 'postId',    sortDirection: 'ASC' },
+  { id: 'views',   name: '조회수순', sortColumn: 'viewCount', sortDirection: 'DESC' },
+  { id: 'title',   name: '제목순',   sortColumn: 'title',     sortDirection: 'ASC' },
 ];
 
 function getResult(data) {
   return data?.result ?? data?.data?.result ?? data?.data ?? data;
 }
-
 
 function getUploadedFileId(response) {
   const data = getResult(response);
@@ -73,7 +72,7 @@ async function cleanupUploadedFiles(uploadedFiles) {
     if (!storedName) return;
 
     try {
-      await api.delete(`/api/files/${encodeURIComponent(storedName)}`);
+      await api.delete(`/api/files?fileKey=${encodeURIComponent(storedName)}`);
     } catch {
       // 글 등록 실패 시 업로드된 임시 파일 삭제를 시도하되, 삭제 실패가 화면 흐름을 막지는 않게 둡니다.
     }
@@ -145,7 +144,6 @@ function getFileUrls(post) {
   }
   return [];
 }
-
 
 async function fetchCommentCount(postId) {
   if (!postId) return 0;
@@ -234,9 +232,8 @@ export default function Community() {
       const selectedSort = SORT_OPTIONS.find(option => option.id === sortOption) || SORT_OPTIONS[0];
       const params = new URLSearchParams({ size: '100' });
 
-      if (selectedSort.sort) {
-        params.set('sort', selectedSort.sort);
-      }
+      params.set('sortColumn', selectedSort.sortColumn);
+      params.set('sortDirection', selectedSort.sortDirection);
 
       const res = await api.get(`/api/community/posts?${params.toString()}`);
       const rawList = normalizeList(res).map(post => applyCachedBoard(post, readBoardCache()));
@@ -305,7 +302,12 @@ export default function Community() {
 
   const handleFileChange = e => {
     const selectedFiles = Array.from(e.target.files || []);
-    setForm(prev => ({ ...prev, files: selectedFiles }));
+
+    setForm(prev => ({
+      ...prev,
+      files: [...prev.files, ...selectedFiles],
+    }));
+
     e.target.value = '';
   };
 

@@ -61,7 +61,7 @@ async function cleanupUploadedFiles(uploadedFiles) {
     if (!storedName) return;
 
     try {
-      await api.delete(`/api/files/${encodeURIComponent(storedName)}`);
+      await api.delete(`/api/files?fileKey=${encodeURIComponent(storedName)}`);
     } catch {
       // 글 등록 실패 시 업로드된 임시 파일 삭제를 시도하되, 삭제 실패가 화면 흐름을 막지는 않게 둡니다.
     }
@@ -122,27 +122,81 @@ function isMine(writerName) {
 }
 
 function getFileUrls(post) {
+  if (Array.isArray(post?.files) && post.files.length > 0) {
+    return post.files;
+  }
+
   if (Array.isArray(post?.imageUrls)) return post.imageUrls;
   if (Array.isArray(post?.fileUrls)) return post.fileUrls;
-  if (Array.isArray(post?.files)) {
-    return post.files.map(file => file?.fileUrl || file?.url).filter(Boolean);
-  }
+
   return [];
 }
 
-function getFileHref(url) {
-  if (!url) return '#';
-  const normalizedUrl = url.replace('/api/files/download/', '/api/files/');
-  if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) return normalizedUrl;
-  return `${API_BASE_URL}${normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`}`;
+function getFileUrl(file) {
+  if (!file) return '';
+
+  if (typeof file === 'object') {
+    return file.fileUrl || file.url || file.filePath || '';
+  }
+
+  return file;
 }
 
+function getFileKeyFromUrl(file) {
+  if (!file) return null;
+
+  if (typeof file === 'object') {
+    return (
+      file.storedName ||
+      file.fileKey ||
+      file.storedFileName ||
+      getFileKeyFromUrl(file.fileUrl || file.url || file.filePath)
+    );
+  }
+
+  const value = String(file).trim();
+
+  try {
+    const parsedUrl = new URL(value);
+
+    const queryFileKey = parsedUrl.searchParams.get('fileKey');
+    if (queryFileKey) {
+      return decodeURIComponent(queryFileKey);
+    }
+
+    const path = parsedUrl.pathname.replace(/^\/+/, '');
+
+    if (path.startsWith('api/files/download/')) {
+      return decodeURIComponent(path.replace('api/files/download/', ''));
+    }
+
+    if (path.startsWith('uploads/')) {
+      return decodeURIComponent(path);
+    }
+
+    return decodeURIComponent(path);
+  } catch {
+    const cleanUrl = value.split('?')[0];
+    const path = cleanUrl.replace(/^\/+/, '');
+
+    if (path.startsWith('api/files/download/')) {
+      return decodeURIComponent(path.replace('api/files/download/', ''));
+    }
+
+    return decodeURIComponent(path);
+  }
+}
+
+function getFileHref(url) {
+  const fileKey = getFileKeyFromUrl(url);
+
+  if (!fileKey) return '#';
+
+  return `${API_BASE_URL}/api/files/download?fileKey=${encodeURIComponent(fileKey)}`;
+}
 
 function getStoredNameFromUrl(url) {
-  if (!url) return null;
-  const cleanUrl = url.split('?')[0];
-  const lastPart = cleanUrl.split('/').filter(Boolean).pop();
-  return lastPart ? decodeURIComponent(lastPart) : null;
+  return getFileKeyFromUrl(url);
 }
 
 async function downloadFileWithAuth(url, index) {
@@ -167,17 +221,35 @@ async function downloadFileWithAuth(url, index) {
   window.URL.revokeObjectURL(objectUrl);
 }
 
-function getFileNameFromUrl(url, index) {
-  if (!url) return `첨부파일 ${index + 1}`;
-  const cleanUrl = url.split('?')[0];
-  const lastPart = cleanUrl.split('/').filter(Boolean).pop();
-  const decodedName = decodeURIComponent(lastPart || `첨부파일 ${index + 1}`);
+function getFileNameFromUrl(file, index) {
+  if (!file) return `첨부파일 ${index + 1}`;
 
-  // 백엔드는 저장 파일명을 UUID_원본파일명 형태로 내려주므로 화면에는 원본 파일명만 표시합니다.
-  return decodedName.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/i, '');
+  if (typeof file === 'object') {
+    return (
+      file.originalName ||
+      file.originalFileName ||
+      file.fileName ||
+      file.name ||
+      getFileNameFromUrl(file.fileUrl || file.url || file.filePath, index)
+    );
+  }
+
+  const cleanUrl = String(file).split('?')[0];
+  const lastPart = cleanUrl.split('/').filter(Boolean).pop();
+  const decodedName = decodeURIComponent(lastPart || '');
+
+  if (!decodedName) {
+    return `첨부파일 ${index + 1}`;
+  }
+
+  return decodedName.replace(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_/i,
+    ''
+  );
 }
 
-function isImageUrl(url) {
+function isImageUrl(file) {
+  const url = getFileUrl(file);
   return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test((url || '').split('?')[0]);
 }
 
@@ -320,29 +392,37 @@ export default function CommunityPostDetail() {
     }
   };
 
-  const deleteExistingFile = async url => {
-    const storedName = getStoredNameFromUrl(url);
+  const deleteExistingFile = async file => {
+    const storedName = getStoredNameFromUrl(file);
+
     if (!storedName) {
       setMsg('삭제할 파일 정보를 찾지 못했어요.');
       return;
     }
 
-    if (!confirm(`${getFileNameFromUrl(url, 0)} 파일을 삭제할까요?`)) return;
+    if (!confirm(`${getFileNameFromUrl(file, 0)} 파일을 삭제할까요?`)) return;
 
-    setDeletingFileUrl(url);
+    setDeletingFileUrl(storedName);
     setMsg('');
 
     try {
-      await api.delete(`/api/files/${encodeURIComponent(storedName)}`);
+      await api.delete(`/api/files?fileKey=${encodeURIComponent(storedName)}`);
+
       setPost(prev => {
         if (!prev) return prev;
-        const nextUrls = getFileUrls(prev).filter(fileUrl => fileUrl !== url);
+
+        const nextFiles = getFileUrls(prev).filter(
+          existingFile => getFileKeyFromUrl(existingFile) !== storedName
+        );
+
         return {
           ...prev,
-          imageUrls: nextUrls,
-          fileUrls: nextUrls,
+          files: nextFiles,
+          imageUrls: nextFiles.map(getFileUrl).filter(Boolean),
+          fileUrls: nextFiles.map(getFileUrl).filter(Boolean),
         };
       });
+
       setMsg('첨부파일이 삭제됐어요.');
       await load();
     } catch (err) {
@@ -586,9 +666,9 @@ export default function CommunityPostDetail() {
 }
 
 function AttachedFiles({ files, canDelete = false, deletingFileUrl = null, onDelete }) {
-  const handleDownload = async (url, index) => {
+  const handleDownload = async (file, index) => {
     try {
-      await downloadFileWithAuth(url, index);
+      await downloadFileWithAuth(file, index);
     } catch (err) {
       alert(err.message || '파일을 다운로드하지 못했어요. 다시 로그인 후 시도해주세요.');
     }
@@ -596,30 +676,41 @@ function AttachedFiles({ files, canDelete = false, deletingFileUrl = null, onDel
 
   return (
     <div className="attached-file-list">
-      {files.map((url, index) => (
-        <div className="attached-file-link" key={`${url}-${index}`} title={getFileNameFromUrl(url, index)}>
-          <span className="attached-file-name">📎 {getFileNameFromUrl(url, index)}</span>
-          <div className="attached-file-actions">
-            <button
-              type="button"
-              className="attached-file-action"
-              onClick={() => handleDownload(url, index)}
-            >
-              다운로드
-            </button>
-            {canDelete && (
+      {files.map((file, index) => {
+        const fileKey = getFileKeyFromUrl(file);
+        const fileName = getFileNameFromUrl(file, index);
+
+        return (
+          <div
+            className="attached-file-link"
+            key={`${fileKey || getFileUrl(file) || index}-${index}`}
+            title={fileName}
+          >
+            <span className="attached-file-name">📎 {fileName}</span>
+
+            <div className="attached-file-actions">
               <button
                 type="button"
-                className="attached-file-action danger"
-                onClick={() => onDelete?.(url)}
-                disabled={deletingFileUrl === url}
+                className="attached-file-action"
+                onClick={() => handleDownload(file, index)}
               >
-                {deletingFileUrl === url ? '삭제 중' : '삭제'}
+                다운로드
               </button>
-            )}
+
+              {canDelete && (
+                <button
+                  type="button"
+                  className="attached-file-action danger"
+                  onClick={() => onDelete?.(file)}
+                  disabled={deletingFileUrl === fileKey}
+                >
+                  {deletingFileUrl === fileKey ? '삭제 중' : '삭제'}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
