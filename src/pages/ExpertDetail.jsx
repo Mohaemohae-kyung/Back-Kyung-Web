@@ -37,6 +37,12 @@ export default function ExpertDetail() {
 
   const [msg, setMsg] = useState('');
 
+  // =========================
+  // 로그인 유저
+  // =========================
+  const loginUser =
+    JSON.parse(localStorage.getItem('user'));
+
   useEffect(() => {
 
     api.get(`/api/experts/${serviceId}`)
@@ -119,6 +125,12 @@ export default function ExpertDetail() {
       </Page>
     );
   }
+
+  // =========================
+  // 본인 게시물 여부
+  // =========================
+  const isMine =
+    loginUser?.userId === expert.ownerUserId;
 
   return (
 
@@ -228,121 +240,126 @@ export default function ExpertDetail() {
 
         </div>
 
-        <aside className="panel quote-panel">
+        {
+          !isMine && (
 
-          <div className="quote-head">
+            <aside className="panel quote-panel">
 
-            <div>
+              <div className="quote-head">
 
-              <h3>견적 요청하기</h3>
+                <div>
 
-              <p>
-                필요한 내용을 남기면
-                고수가 확인 후 응답합니다.
-              </p>
-
-            </div>
-
-            <FavoriteToggle
-              expertId={
-                expert.expertProfileId || serviceId
-              }
-              label
-            />
-
-          </div>
-
-          {
-            done
-
-              ? (
-
-                <div className="done-box">
-
-                  <CheckCircle2 size={34} />
-
-                  <h3>견적 요청 완료</h3>
+                  <h3>견적 요청하기</h3>
 
                   <p>
-                    요청관리에서 진행 상태를
-                    확인할 수 있어요.
+                    필요한 내용을 남기면
+                    고수가 확인 후 응답합니다.
                   </p>
-
-                  <Link
-                    className="btn btn-primary"
-                    to="/requests"
-                  >
-                    요청관리로 이동
-                  </Link>
 
                 </div>
 
-              )
+                <FavoriteToggle
+                  expertId={
+                    expert.expertProfileId || serviceId
+                  }
+                  label
+                />
 
-              : (
+              </div>
 
-                <form
-                  className="form"
-                  onSubmit={submit}
-                >
+              {
+                done
 
-                  <Input
-                    label="요청 제목"
-                    value={form.title}
-                    onChange={(v) =>
-                      setForm({
-                        ...form,
-                        title: v
-                      })
-                    }
-                    placeholder="예: 자소서 첨삭 요청"
-                  />
+                  ? (
 
-                  <FieldArea
-                    label="요청 내용"
-                    value={form.content}
-                    onChange={(v) =>
-                      setForm({
-                        ...form,
-                        content: v
-                      })
-                    }
-                    placeholder="필요한 서비스, 일정, 현재 상황을 적어주세요."
-                  />
+                    <div className="done-box">
 
-                  <Input
-                    label="희망 예산"
-                    value={form.budget}
-                    onChange={(v) =>
-                      setForm({
-                        ...form,
-                        budget: v
-                      })
-                    }
-                    placeholder="예: 3만원 내외"
-                  />
+                      <CheckCircle2 size={34} />
 
-                  <Input
-                    label="희망 일정"
-                    type="datetime-local"
-                    value={form.preferredDate}
-                    onChange={(v) =>
-                      setForm({
-                        ...form,
-                        preferredDate: v
-                      })
-                    }
-                  />
+                      <h3>견적 요청 완료</h3>
 
-                  <button className="btn btn-primary full">
-                    견적 요청 보내기
-                  </button>
+                      <p>
+                        요청관리에서 진행 상태를
+                        확인할 수 있어요.
+                      </p>
 
-                </form>
-              )
-          }
+                      <Link
+                        className="btn btn-primary"
+                        to="/requests"
+                      >
+                        요청관리로 이동
+                      </Link>
 
-        </aside>
+                    </div>
+
+                  )
+
+                  : (
+
+                    <form
+                      className="form"
+                      onSubmit={submit}
+                    >
+
+                      <Input
+                        label="요청 제목"
+                        value={form.title}
+                        onChange={(v) =>
+                          setForm({
+                            ...form,
+                            title: v
+                          })
+                        }
+                        placeholder="예: 자소서 첨삭 요청"
+                      />
+
+                      <FieldArea
+                        label="요청 내용"
+                        value={form.content}
+                        onChange={(v) =>
+                          setForm({
+                            ...form,
+                            content: v
+                          })
+                        }
+                        placeholder="필요한 서비스, 일정, 현재 상황을 적어주세요."
+                      />
+
+                      <Input
+                        label="희망 예산"
+                        value={form.budget}
+                        onChange={(v) =>
+                          setForm({
+                            ...form,
+                            budget: v
+                          })
+                        }
+                        placeholder="예: 3만원 내외"
+                      />
+
+                      <Input
+                        label="희망 일정"
+                        type="datetime-local"
+                        value={form.preferredDate}
+                        onChange={(v) =>
+                          setForm({
+                            ...form,
+                            preferredDate: v
+                          })
+                        }
+                      />
+
+                      <button className="btn btn-primary full">
+                        견적 요청 보내기
+                      </button>
+
+                    </form>
+                  )
+              }
+
+            </aside>
+          )
+        }
 
       </div>
 

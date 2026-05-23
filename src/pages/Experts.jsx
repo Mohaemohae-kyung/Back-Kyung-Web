@@ -1,12 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Star, MapPin, Clock3, Filter } from 'lucide-react';
+import {
+  Search,
+  Star,
+  MapPin,
+  Clock3,
+  Filter
+} from 'lucide-react';
 
 import { api } from '../api/client';
-import { CATEGORIES, REGIONS } from '../data/constants';
+
+import {
+  SERVICE_CATEGORY_GROUPS,
+  LOCATION_GROUPS
+} from '../data/constants';
+
 import { normalizeList } from '../utils/normalizeList';
 
 import { Page } from '../components/common';
+
 import FavoriteToggle from '../components/FavoriteToggle';
 
 export default function Experts() {
@@ -17,36 +29,51 @@ export default function Experts() {
     locationId: ''
   });
 
+  const [appliedFilters, setAppliedFilters] = useState({
+    keyword: '',
+    categoryId: '',
+    locationId: ''
+  });
+
   const [items, setItems] = useState([]);
+
   const [msg, setMsg] = useState('');
+
+  const [loading, setLoading] = useState(false);
 
   const load = async () => {
 
     setMsg('');
+    setLoading(true);
 
     try {
 
-      const params = new URLSearchParams();
-
-      Object.entries(filters).forEach(([k, v]) => {
-        if (v) params.append(k, v);
-      });
-
       const res = await api.get(
-        '/api/experts/search' +
-        (params.toString() ? `?${params.toString()}` : '')
+        '/api/experts/search'
       );
 
       const normalized = normalizeList(res);
 
-      console.log(normalized);
+      console.log('고수 목록:', normalized);
 
       setItems(normalized);
 
     } catch (err) {
 
+      console.error(err);
+
       setItems([]);
-      setMsg(err.message);
+
+      setMsg(
+        err?.response?.data?.message ||
+        err?.message ||
+        '고수 목록을 불러오지 못했습니다.'
+      );
+
+    } finally {
+
+      setLoading(false);
+
     }
   };
 
@@ -54,7 +81,145 @@ export default function Experts() {
     load();
   }, []);
 
+  const updateFilter = (name, value) => {
+
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+
+  };
+
+  const handleSearch = () => {
+
+    setAppliedFilters({
+      ...filters
+    });
+
+  };
+
+  const handleKeyDown = (e) => {
+
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+
+  };
+
+  const visibleItems = useMemo(() => {
+
+    const keyword =
+      appliedFilters.keyword
+        .trim()
+        .toLowerCase();
+
+    return items.filter((expert) => {
+
+      const searchText = [
+
+        expert.displayName,
+        expert.serviceTitle,
+        expert.serviceDescription,
+        expert.introduction,
+        expert.mainCategoryName,
+        expert.mainLocationName
+
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      const matchesKeyword =
+        !keyword ||
+        searchText.includes(keyword);
+
+      /* =========================
+         카테고리 필터
+         ========================= */
+
+      let matchesCategory = true;
+
+      if (appliedFilters.categoryId) {
+
+        const selectedCategory =
+          SERVICE_CATEGORY_GROUPS.find(
+            c =>
+              String(c.id) ===
+              String(appliedFilters.categoryId)
+          );
+
+        const childNames =
+          selectedCategory?.children?.map(
+            child => child.name
+          ) || [];
+
+        matchesCategory =
+
+          childNames.includes(
+            expert.mainCategoryName
+          ) ||
+
+          expert.mainCategoryName ===
+            selectedCategory?.name;
+      }
+
+      /* =========================
+         지역 필터
+         ========================= */
+
+      let matchesLocation = true;
+
+      if (appliedFilters.locationId) {
+
+        const selectedLocation =
+          LOCATION_GROUPS.find(
+            l =>
+              String(l.id) ===
+              String(appliedFilters.locationId)
+          );
+
+        const childNames =
+          selectedLocation?.children?.map(
+            child => child.name
+          ) || [];
+
+        matchesLocation =
+
+          childNames.includes(
+            expert.mainLocationName
+          ) ||
+
+          expert.mainLocationName ===
+            selectedLocation?.name ||
+
+          expert.mainLocationName?.includes(
+            selectedLocation?.name
+          );
+      }
+
+      return (
+        matchesKeyword &&
+        matchesCategory &&
+        matchesLocation
+      );
+
+    });
+
+  }, [
+    items,
+    appliedFilters
+  ]);
+
+  const hasActiveFilter =
+
+    appliedFilters.keyword ||
+
+    appliedFilters.categoryId ||
+
+    appliedFilters.locationId;
+
   return (
+
     <Page
       title="고수찾기"
       desc="필요한 서비스와 지역을 선택해 나에게 맞는 고수를 찾아보세요."
@@ -69,50 +234,69 @@ export default function Experts() {
           <input
             value={filters.keyword}
             onChange={(e) =>
-              setFilters({
-                ...filters,
-                keyword: e.target.value
-              })
+              updateFilter(
+                'keyword',
+                e.target.value
+              )
             }
+            onKeyDown={handleKeyDown}
             placeholder="서비스명이나 고수명을 검색하세요"
           />
 
         </div>
 
+        {/* 카테고리 */}
+
         <select
           value={filters.categoryId}
           onChange={(e) =>
-            setFilters({
-              ...filters,
-              categoryId: e.target.value
-            })
+            updateFilter(
+              'categoryId',
+              e.target.value
+            )
           }
         >
 
-          {CATEGORIES.map((c) => (
+          <option value="">
+            전체 카테고리
+          </option>
 
-            <option value={c.id} key={c.id}>
-              {c.name}
+          {SERVICE_CATEGORY_GROUPS.map((category) => (
+
+            <option
+              value={category.id}
+              key={category.id}
+            >
+              {category.name}
             </option>
 
           ))}
 
         </select>
 
+        {/* 지역 */}
+
         <select
           value={filters.locationId}
           onChange={(e) =>
-            setFilters({
-              ...filters,
-              locationId: e.target.value
-            })
+            updateFilter(
+              'locationId',
+              e.target.value
+            )
           }
         >
 
-          {REGIONS.map((r) => (
+          <option value="">
+            전체 지역
+          </option>
 
-            <option value={r.id} key={r.id}>
-              {r.name}
+          {LOCATION_GROUPS.map((region) => (
+
+            <option
+              value={region.id}
+              key={region.id}
+            >
+              {region.name}
             </option>
 
           ))}
@@ -120,39 +304,55 @@ export default function Experts() {
         </select>
 
         <button
+          type="button"
           className="btn btn-primary"
-          onClick={load}
+          onClick={handleSearch}
+          disabled={loading}
         >
 
           <Filter size={16} />
-          검색
+
+          {loading ? '검색중...' : '검색'}
 
         </button>
 
       </div>
 
       {msg && (
+
         <p className="message">
           {msg}
         </p>
+
       )}
 
-      {items.length ? (
+      {loading ? (
+
+        <div className="panel empty-panel">
+
+          <p className="muted">
+            고수 정보를 불러오는 중입니다...
+          </p>
+
+        </div>
+
+      ) : visibleItems.length ? (
 
         <div className="expert-grid">
 
-          {items.map((x, i) => (
+          {visibleItems.map((expert, i) => (
 
             <Link
               className="expert-card card"
-              to={`/experts/${x.expertServiceId}`}
-              key={x.expertServiceId || i}
+              to={`/experts/${expert.expertServiceId}`}
+              key={expert.expertServiceId || i}
             >
 
               <div className="card-row">
 
                 <div className="avatar">
-                  {(x.displayName || '고').slice(0, 1)}
+                  {(expert.displayName || '고')
+                    .slice(0, 1)}
                 </div>
 
                 <div className="card-actions">
@@ -162,7 +362,9 @@ export default function Experts() {
                   </span>
 
                   <FavoriteToggle
-                    expertId={x.expertProfileId}
+                    expertId={
+                      expert.expertProfileId
+                    }
                   />
 
                 </div>
@@ -170,14 +372,20 @@ export default function Experts() {
               </div>
 
               <h3>
-                {x.serviceTitle || x.displayName || '활동 고수'}
+                {
+                  expert.serviceTitle ||
+                  expert.displayName ||
+                  '활동 고수'
+                }
               </h3>
 
               <p>
                 {
                   (
-                    x.serviceDescription ||
-                    x.introduction ||
+                    expert.serviceDescription ||
+
+                    expert.introduction ||
+
                     '소개글을 준비 중입니다.'
                   ).slice(0, 60)
                 }
@@ -186,34 +394,59 @@ export default function Experts() {
               <div className="meta">
 
                 <span>
+
                   <Star size={14} />
-                  {x.rating || '0.0'} ({x.reviewCount || 0})
+
+                  {expert.rating || '0.0'}
+
+                  ({expert.reviewCount || 0})
+
                 </span>
 
                 <span>
+
                   <MapPin size={14} />
-                  {x.mainLocationName || '지역 협의'}
+
+                  {
+                    expert.mainLocationName ||
+                    '지역 협의'
+                  }
+
                 </span>
 
                 <span>
+
                   <Clock3 size={14} />
-                  경력 {x.careerYears || 0}년
+
+                  경력 {expert.careerYears || 0}년
+
                 </span>
 
               </div>
 
               <div className="service-category">
-                {x.mainCategoryName}
+
+                {
+                  expert.mainCategoryName ||
+                  '카테고리 미지정'
+                }
+
               </div>
 
               <div className="card-footer">
 
                 <b>
+
                   {
-                    x.price && x.price > 0
-                      ? `${x.price.toLocaleString()}원`
+                    expert.price &&
+                    Number(expert.price) > 0
+
+                      ? `${Number(expert.price)
+                          .toLocaleString()}원`
+
                       : '견적 협의'
                   }
+
                 </b>
 
                 <span>
@@ -233,7 +466,13 @@ export default function Experts() {
         <div className="panel empty-panel">
 
           <p className="muted">
-            아직 등록된 고수가 없습니다.
+
+            {hasActiveFilter
+
+              ? '검색 조건에 맞는 고수가 없습니다.'
+
+              : '아직 등록된 고수가 없습니다.'}
+
           </p>
 
         </div>
@@ -241,5 +480,6 @@ export default function Experts() {
       )}
 
     </Page>
+
   );
 }

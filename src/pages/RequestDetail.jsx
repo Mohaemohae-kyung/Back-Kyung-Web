@@ -41,19 +41,35 @@ export default function RequestDetail() {
         setLoading(false);
       });
 
-  }, [id]);
+  }, [id, navigate]);
 
   const approve = async () => {
 
     try {
 
-      await api.patch(
+      const res = await api.patch(
         `/api/service-requests/${id}/approve`
       );
 
       alert('요청을 수락했습니다.');
 
-      navigate('/chat');
+      const result =
+        res?.result ||
+        res?.data?.result ||
+        res?.data;
+
+      const roomId =
+        result?.chatRoomId ||
+        item?.chatRoomId;
+
+      if (roomId) {
+
+        navigate(`/chat/${roomId}`);
+
+      } else {
+
+        alert('채팅방 정보를 찾을 수 없어요.');
+      }
 
     } catch (err) {
 
@@ -123,8 +139,8 @@ export default function RequestDetail() {
             {' '}
 
             {
-              item.userName ||
               item.requesterName ||
+              item.userName ||
               item.name ||
               '사용자'
             }
@@ -157,7 +173,7 @@ export default function RequestDetail() {
             <strong>
               {
                 item.budget
-                  ? `${item.budget.toLocaleString()}원`
+                  ? `${Number(item.budget).toLocaleString()}원`
                   : '협의'
               }
             </strong>

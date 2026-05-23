@@ -1,1 +1,1 @@
-{"scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview"},"dependencies":{"@vitejs/plugin-react":"latest","vite":"latest","react":"latest","react-dom":"latest","react-router-dom":"latest","lucide-react":"latest"},"devDependencies":{}}
+{"scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview"},"dependencies":{"@stomp/stompjs":"^7.3.0","@vitejs/plugin-react":"latest","jwt-decode":"^4.0.0","lucide-react":"latest","react":"latest","react-dom":"latest","react-router-dom":"latest","sockjs-client":"^1.6.1","vite":"latest"}}

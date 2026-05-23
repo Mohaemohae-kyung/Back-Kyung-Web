@@ -1,105 +1,215 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
-import { api, getStoredUser } from '../api/client';
-import { Page } from '../components/common';
+
+import { api, getStoredUser }
+  from '../api/client';
+
+import { Page }
+  from '../components/common';
 
 export default function Requests() {
 
   const navigate = useNavigate();
 
-  const [items, setItems] = useState([]);
-  const [msg, setMsg] = useState('');
+  const [items, setItems] =
+    useState([]);
 
-  const token = localStorage.getItem('accessToken');
+  const [msg, setMsg] =
+    useState('');
 
-  const user = getStoredUser();
+  const token =
+    localStorage.getItem(
+      'accessToken'
+    );
 
-  const isExpert = user?.role === 'EXPERT';
+  const user =
+    getStoredUser();
 
+  const isExpert =
+    user?.role === 'EXPERT';
+
+  // =========================
+  // 요청 목록 조회
+  // =========================
   useEffect(() => {
 
     if (!token) return;
 
-    const endpoint = isExpert
-      ? '/api/service-requests/received'
-      : '/api/service-requests/me';
+    const endpoint =
 
-    console.log('현재 사용자 ROLE = ', user?.role);
-    console.log('호출 API = ', endpoint);
+      isExpert
+
+        ? '/api/service-requests/received'
+
+        : '/api/service-requests/me';
+
+    console.log(
+      '현재 사용자 ROLE = ',
+      user?.role
+    );
+
+    console.log(
+      '호출 API = ',
+      endpoint
+    );
 
     api.get(endpoint)
 
       .then(res => {
 
-        console.log('요청 조회 성공', res);
+        console.log(
+          '요청 조회 성공',
+          res
+        );
 
         const list =
+
           res?.result ||
+
           res?.data?.result ||
+
           res?.data ||
+
           [];
 
-        console.log('최종 리스트 = ', list);
+        console.log(
+          '최종 리스트 = ',
+          list
+        );
 
-        setItems(Array.isArray(list) ? list : []);
+        setItems(
+          Array.isArray(list)
+            ? list
+            : []
+        );
 
         setMsg('');
+
       })
 
       .catch(err => {
 
-        console.error('요청 조회 실패', err);
+        console.error(
+          '요청 조회 실패',
+          err
+        );
 
         setItems([]);
 
-        setMsg('요청 내역을 불러오지 못했어요.');
+        setMsg(
+          '요청 내역을 불러오지 못했어요.'
+        );
       });
 
   }, [token, isExpert]);
 
-  const open = item => {
+  // =========================
+  // 요청 클릭
+  // =========================
+  const open = async item => {
 
-    console.log('클릭한 요청 = ', item);
+    console.log(
+      '클릭한 요청 = ',
+      item
+    );
 
-    // ===== 고수(받은 요청) =====
+    const canChat =
+
+      item.status === 'CHATTING' ||
+
+      item.status === 'ACCEPTED' ||
+
+      item.status === 'APPROVED' ||
+
+      item.accepted ||
+
+      item.status === '수락됨';
+
+    // =========================
+    // 채팅 가능 상태
+    // =========================
+    if (
+      canChat &&
+      item.chatRoomId
+    ) {
+
+      try {
+
+        // =========================
+        // 먼저 읽음 처리
+        // =========================
+        await api.patch(
+
+          `/api/chat/rooms/${item.chatRoomId}/read`
+        );
+
+        // =========================
+        // 요청관리 알림 제거
+        // =========================
+        setItems(prev =>
+
+          prev.map(request => {
+
+            if (
+
+              Number(
+                request.chatRoomId
+              ) ===
+
+              Number(
+                item.chatRoomId
+              )
+            ) {
+
+              return {
+
+                ...request,
+
+                unreadCount: 0
+              };
+            }
+
+            return request;
+          })
+        );
+
+      } catch (err) {
+
+        console.error(
+          '읽음 처리 실패',
+          err
+        );
+      }
+
+      navigate(
+        `/chat/${item.chatRoomId}`
+      );
+
+      return;
+    }
+
+    // =========================
+    // 고수 : 받은 요청 상세
+    // =========================
     if (isExpert) {
 
-    // 이미 채팅중이면 채팅방 이동
-    if (
-      item.status === 'CHATTING' ||
-      item.status === 'ACCEPTED' ||
-      item.status === 'APPROVED'
-    ) {
-
-      navigate('/chat');
+      navigate(
+        `/requests/${
+          item.requestId || item.id
+        }`
+      );
 
       return;
     }
 
-    // 아직 대기중이면 상세페이지
-    navigate(`/requests/${item.requestId || item.id}`);
-
-    return;
-  }
-
-    // ===== 일반 사용자(보낸 요청) =====
+    // =========================
+    // 거절 상태
+    // =========================
     if (
-      item.accepted ||
-      item.status === '수락됨' ||
-      item.status === 'ACCEPTED' ||
-      item.status === 'APPROVED' ||
-      item.status === 'CHATTING'
-    ) {
 
-      navigate('/chat');
-
-      return;
-    }
-
-    // 거절됨
-    if (
       item.status === 'REJECTED' ||
+
       item.status === '거절됨'
     ) {
 
@@ -110,15 +220,21 @@ export default function Requests() {
       return;
     }
 
+    // =========================
     // 검토중
+    // =========================
     alert(
       '고수가 아직 요청을 검토 중입니다. 수락되면 채팅으로 이동할 수 있어요.'
     );
   };
 
+  // =========================
+  // 비로그인
+  // =========================
   if (!token) {
 
     return (
+
       <Page
         title="요청관리"
         desc="로그인 후 요청 내역을 확인할 수 있어요."
@@ -127,7 +243,9 @@ export default function Requests() {
         <div className="panel empty-panel">
 
           <p className="muted">
+
             요청관리는 로그인 후 이용할 수 있어요.
+
           </p>
 
         </div>
@@ -141,113 +259,178 @@ export default function Requests() {
     <Page
       title="요청관리"
       desc={
+
         isExpert
+
           ? '고객에게 받은 견적 요청과 진행 상태를 확인합니다.'
+
           : '내가 보낸 견적 요청과 진행 상태를 확인합니다.'
       }
     >
 
-      {msg && (
-        <p className="message">
-          {msg}
-        </p>
-      )}
+      {
+        msg && (
+
+          <p className="message">
+
+            {msg}
+
+          </p>
+        )
+      }
 
       <div className="request-list">
 
-        {items.length > 0 ? (
+        {
+          items.length > 0 ? (
 
-          items.map((item, i) => (
+            items.map((item, i) => {
 
-            <button
-              key={item.requestId || item.id || i}
+              const unreadCount =
+                item.unreadCount || 0;
 
-              className={`request-card ${
-                item.status === 'CHATTING' ||
-                item.status === 'ACCEPTED' ||
-                item.status === 'APPROVED'
-                  ? 'accepted'
-                  : item.status === 'REJECTED'
-                    ? 'rejected'
-                    : ''
-              }`}
+              return (
 
-              onClick={() => open(item)}
-            >
-
-              <div>
-
-                <span className="badge">
-                  {item.status || '검토중'}
-                </span>
-
-                <h3>
-                  {item.title || item.serviceTitle || '견적 요청'}
-                </h3>
-
-                <p>
-
-                  {
-                    isExpert
-                      ? (
-                          item.userName ||
-                          item.requesterName ||
-                          item.name ||
-                          '요청 사용자'
-                        )
-                      : (
-                          item.expertName ||
-                          item.expertDisplayName ||
-                          '고수 확인 중'
-                        )
+                <button
+                  key={
+                    item.requestId ||
+                    item.id ||
+                    i
                   }
 
-                  {' · '}
+                  className={`request-card ${
+                    item.status === 'CHATTING' ||
+                    item.status === 'ACCEPTED' ||
+                    item.status === 'APPROVED'
 
-                  {
-                    item.categoryName ||
-                    item.category ||
-                    '서비스 협의'
+                      ? 'accepted'
+
+                      : item.status === 'REJECTED'
+
+                        ? 'rejected'
+
+                        : ''
+                  }`}
+
+                  onClick={() =>
+                    open(item)
                   }
+                >
 
-                  {' · '}
+                  <div>
 
-                  {
-                    item.createdAt
-                      ? String(item.createdAt).slice(0, 10)
-                      : '최근 요청'
-                  }
+                    <span className="badge">
 
-                </p>
+                      {
+                        item.status ||
+                        '검토중'
+                      }
 
-              </div>
+                    </span>
 
-              <ChevronRight size={20} />
+                    <h3>
 
-            </button>
+                      {
+                        item.title ||
+                        item.serviceTitle ||
+                        '견적 요청'
+                      }
 
-          ))
+                    </h3>
 
-        ) : (
+                    <p>
 
-          <div className="panel empty-panel">
+                      {
+                        isExpert
 
-            <p className="muted">
+                          ? (
 
-              {
-                isExpert
-                  ? '아직 받은 요청이 없어요.'
-                  : '아직 요청 내역이 없어요.'
-              }
+                              item.userName ||
 
-            </p>
+                              item.requesterName ||
 
-          </div>
+                              item.name ||
 
-        )}
+                              '요청 사용자'
+                            )
+
+                          : (
+
+                              item.expertName ||
+
+                              item.expertDisplayName ||
+
+                              '고수 확인 중'
+                            )
+                      }
+
+                      {' · '}
+
+                      {
+                        item.categoryName ||
+
+                        item.category ||
+
+                        '서비스 협의'
+                      }
+
+                      {' · '}
+
+                      {
+                        item.createdAt
+
+                          ? String(
+                              item.createdAt
+                            ).slice(0, 10)
+
+                          : '최근 요청'
+                      }
+
+                    </p>
+
+                    {/* =========================
+                        새 메시지 알림
+                    ========================= */}
+                    {
+                      unreadCount > 0 && (
+
+                        <div className="request-alert">
+
+                          새 메시지 {unreadCount}
+
+                        </div>
+                      )
+                    }
+
+                  </div>
+
+                  <ChevronRight size={20} />
+
+                </button>
+              );
+            })
+
+          ) : (
+
+            <div className="panel empty-panel">
+
+              <p className="muted">
+
+                {
+                  isExpert
+
+                    ? '아직 받은 요청이 없어요.'
+
+                    : '아직 요청 내역이 없어요.'
+                }
+
+              </p>
+
+            </div>
+          )
+        }
 
       </div>
-
     </Page>
   );
 }
