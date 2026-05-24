@@ -10,6 +10,9 @@ import SockJS from 'sockjs-client/dist/sockjs';
 import { Client } from '@stomp/stompjs';
 import { jwtDecode } from 'jwt-decode';
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 const ChatSocketContext =
   createContext(null);
 
@@ -74,7 +77,7 @@ export function ChatSocketProvider({
     const client = new Client({
 
       webSocketFactory: () =>
-        new SockJS('http://localhost:8080/ws-stomp'),
+        new SockJS(`${API_BASE_URL}/ws-stomp`),
 
       reconnectDelay: 5000,
 

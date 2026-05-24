@@ -8,6 +8,9 @@ import { jwtDecode } from 'jwt-decode';
 import { Page } from '../components/common';
 import { api } from '../api/client';
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 export default function Chat() {
 
   const navigate = useNavigate();
@@ -146,7 +149,7 @@ export default function Chat() {
 
     const client = new Client({
       webSocketFactory: () =>
-        new SockJS('http://localhost:8080/ws-stomp'),
+        new SockJS(`${API_BASE_URL}/ws-stomp`),
 
       reconnectDelay: 5000,
 
