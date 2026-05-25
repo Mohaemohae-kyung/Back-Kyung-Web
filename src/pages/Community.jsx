@@ -225,6 +225,15 @@ export default function Community() {
   const boardCache = useMemo(() => readBoardCache(), [posts.length]);
 
   const load = async () => {
+
+    // 요청자(일반 유저)는 고수센터 API 호출 자체 차단
+    if (activeBoard === 'CENTER' && !canViewCenter) {
+      setPosts([]);
+      setMsg('');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setMsg('');
 
