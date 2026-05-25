@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, MessageCircle, Paperclip, Send, Trash2 } from 'lucide-r
 import { api, getStoredUser } from '../api/client';
 import { normalizeList } from '../utils/normalizeList';
 import { Page, Input, FieldArea } from '../components/common';
+import ReactMarkdown from 'react-markdown';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const BOARD_CACHE_KEY = 'matchingon.community.boardCache';
@@ -291,7 +292,27 @@ export default function CommunityPostDetail() {
     setMsg('');
 
     try {
-      const postRes = await api.get(`/api/community/posts/${postId}`);
+      const currentBoardType =
+
+        location.state?.post?.boardType ||
+
+        getCachedBoard(postId) ||
+
+        boardType ||
+
+        'LIFE';
+
+      const endpoint =
+
+        currentBoardType === 'CENTER'
+
+          ? `/api/expert-center/posts/${postId}`
+
+          : `/api/community/posts/${postId}`;
+
+      console.log('상세 조회 API = ', endpoint);
+
+      const postRes = await api.get(endpoint);
       const data = getResult(postRes);
       const nextBoardType = data?.boardType || getCachedBoard(postId) || boardType || 'LIFE';
       const nextPost = data ? { ...data, boardType: nextBoardType } : null;
@@ -588,7 +609,9 @@ export default function CommunityPostDetail() {
             <>
               <h2>{post?.title || '게시글을 불러오는 중입니다.'}</h2>
               <div className="post-content-body">
-                {post?.content || post?.body || '게시글 내용이 없습니다.'}
+                <ReactMarkdown>
+                  {post?.content || post?.body || '게시글 내용이 없습니다.'}
+                </ReactMarkdown>
               </div>
 
               {imageUrls.length > 0 && (

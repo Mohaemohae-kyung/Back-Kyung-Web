@@ -103,6 +103,8 @@ export default function Requests() {
 
       item.status === 'APPROVED' ||
 
+      item.status === 'COMPLETED' ||
+
       item.accepted ||
 
       item.status === '수락됨';
