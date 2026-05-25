@@ -232,10 +232,29 @@ export default function Community() {
       const selectedSort = SORT_OPTIONS.find(option => option.id === sortOption) || SORT_OPTIONS[0];
       const params = new URLSearchParams({ size: '100' });
 
-      params.set('sortColumn', selectedSort.sortColumn);
-      params.set('sortDirection', selectedSort.sortDirection);
+      let sortColumn = selectedSort.sortColumn;
 
-      const res = await api.get(`/api/community/posts?${params.toString()}`);
+        if (
+          activeBoard === 'CENTER' &&
+          sortColumn === 'postId'
+        ) {
+          sortColumn = 'noticeId';
+        }
+
+        params.set('sortColumn', sortColumn);
+        params.set('sortDirection', selectedSort.sortDirection);
+
+      const endpoint =
+
+        activeBoard === 'CENTER'
+
+          ? `/api/expert-center/posts?${params.toString()}`
+
+          : `/api/community/posts?${params.toString()}`;
+
+      console.log('호출 API = ', endpoint);
+
+      const res = await api.get(endpoint);
       const rawList = normalizeList(res).map(post => applyCachedBoard(post, readBoardCache()));
       const list = await attachCommentCounts(rawList);
       setPosts(list);
@@ -249,7 +268,7 @@ export default function Community() {
 
   useEffect(() => {
     load();
-  }, [sortOption]);
+  }, [sortOption, activeBoard]);
 
   const activeBoardInfo = BOARDS.find(board => board.id === activeBoard) || BOARDS[0];
   const isCenterBlocked = activeBoard === 'CENTER' && !canViewCenter;
@@ -266,7 +285,9 @@ export default function Community() {
 
       if (!matchedKeyword) return false;
 
-      if (activeBoard === 'CENTER') return boardType === 'CENTER';
+      if (activeBoard === 'CENTER') return true;
+      // LIFE 게시판
+      return boardType !== 'CENTER'; 
 
       // 현재 백엔드 목록 응답에는 boardType이 없기 때문에 기존 글은 LIFE 쪽에서 보이도록 둡니다.
       return boardType !== 'CENTER';
@@ -535,11 +556,16 @@ export default function Community() {
                     <Link
                       className="community-post-card panel"
                       to={`/community/posts/${postId}`}
-                      state={{ post: { ...post, boardType } }}
+                      state={{
+                        post: {
+                          ...post,
+                          boardType: activeBoard
+                        }
+                      }}
                       key={postId}
                     >
                       <div className="community-post-card-head">
-                        <span className="badge">{boardType === 'CENTER' ? '고수센터' : '숨고생활'}</span>
+                        <span className="badge">{activeBoard === 'CENTER' ? '고수센터' : '숨고생활'}</span>
                         {files.length > 0 && <span className="file-count"><Paperclip size={14} /> {files.length}</span>}
                       </div>
 

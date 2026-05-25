@@ -197,8 +197,7 @@ export default function RequestDetail() {
         </div>
 
         {
-          item.status !== 'REJECTED' &&
-          item.status !== '거절됨' &&
+          String(item.status).toUpperCase() === 'PENDING' && (
 
           <div className="request-button-group">
 
@@ -217,8 +216,8 @@ export default function RequestDetail() {
             </button>
 
           </div>
-        }
-
+          )
+      }
       </div>
 
     </div>

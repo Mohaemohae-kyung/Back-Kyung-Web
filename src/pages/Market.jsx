@@ -364,7 +364,11 @@ export default function Market() {
     {items.length ? (
       <div className="market-grid market-list-spacer">
         {items.map(x => (
-          <div className="card market-card" key={x.storeProductId || x.id}>
+          <Link
+            className="card market-card"
+            key={x.storeProductId || x.id}
+            to={`/store-products/${x.storeProductId || x.id}`}
+          >
             <div className="thumb">
               {x.thumbnailImageUrl ? (
                 <img
@@ -389,14 +393,11 @@ export default function Market() {
 
             <div className="card-footer market-card-footer">
               <b>{Number(x.price || 0).toLocaleString()}원</b>
-              <Link
-                className="market-detail-link"
-                to={`/store-products/${x.storeProductId || x.id}`}
-              >
+              <span className="market-detail-link">
                 자세히 보기
-              </Link>
+              </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     ) : (

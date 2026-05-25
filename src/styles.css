@@ -1730,3 +1730,55 @@ body {
   object-fit: cover;
   display: block;
 }
+
+.post-detail-card .post-content-body {
+  white-space: normal !important;
+  line-height: 1.7;
+  font-size: 16px;
+  color: #33415f;
+}
+
+.post-detail-card .post-content-body h1,
+.post-detail-card .post-content-body h2,
+.post-detail-card .post-content-body h3 {
+  line-height: 1.35;
+  font-weight: 700;
+  color: #132238;
+}
+
+.post-detail-card .post-content-body h1 {
+  font-size: 28px;
+  margin: 32px 0 14px;
+}
+
+.post-detail-card .post-content-body h2 {
+  font-size: 22px;
+  margin: 26px 0 10px;
+}
+
+.post-detail-card .post-content-body h3 {
+  font-size: 18px;
+  margin: 22px 0 8px;
+}
+
+.post-detail-card .post-content-body p {
+  margin: 10px 0;
+  line-height: 1.7;
+  white-space: normal !important;
+}
+
+.post-detail-card .post-content-body ul,
+.post-detail-card .post-content-body ol {
+  margin: 12px 0;
+  padding-left: 22px;
+}
+
+.post-detail-card .post-content-body li {
+  margin: 4px 0;
+  line-height: 1.65;
+}
+
+.post-detail-card .post-content-body strong {
+  color: #132238;
+  font-weight: 700;
+}
