@@ -30,6 +30,7 @@ import MyPage from './pages/MyPage';
 import ExpertRegister from './pages/ExpertRegister';
 import RequestDetail from './pages/RequestDetail';
 import { ChatSocketProvider } from './components/ChatSocketContext';
+import AIChatbot from './components/AIChatbot';
 
 export default function App() {
 
@@ -165,6 +166,7 @@ export default function App() {
         </main>
 
         <Footer />
+        <AIChatbot />
       </ChatSocketProvider>          
     </BrowserRouter>
   );
