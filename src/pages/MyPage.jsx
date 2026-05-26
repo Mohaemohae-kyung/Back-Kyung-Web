@@ -12,6 +12,7 @@ export default function MyPage() {
   const [form, setForm] = useState({ name: '', nickname: '', phone: '', profileImageUrl: '' });
   const [withdrawPassword, setWithdrawPassword] = useState('');
   const [msg, setMsg] = useState('');
+  const [payments, setPayments] = useState([]);
 
   const favoriteCount = favoriteExperts.length;
 
@@ -45,6 +46,21 @@ export default function MyPage() {
       .catch(() => {});
 
     loadFavorites().catch(() => setFavoriteExperts([]));
+
+      api.get('/api/payments/me')
+        .then(res => {
+
+          setPayments(
+            res?.result ||
+            res?.data?.result ||
+            res ||
+            []
+          );
+
+        })
+        .catch(() => {
+          setPayments([]);
+        });
   }, []);
 
   const toggleFavoriteList = async () => {
@@ -102,7 +118,17 @@ export default function MyPage() {
       <div className="mypage-grid">
         <div className="panel profile-card">
           <div className="avatar large">
-            {(userInfo.nickname || userInfo.name || 'U').slice(0, 1)}
+
+            {userInfo.profileImageUrl ? (
+              <img
+                src={userInfo.profileImageUrl}
+                alt="프로필"
+                className="profile-image"
+              />
+            ) : (
+              (userInfo.nickname || userInfo.name || 'U').slice(0, 1)
+            )}
+
           </div>
           <h2>{userInfo.nickname || userInfo.name || '사용자'}</h2>
           <p>{userInfo.email || '로그인 후 이용 정보를 확인할 수 있습니다.'}</p>
@@ -164,8 +190,63 @@ export default function MyPage() {
 
       <div className="mypage-sections">
         <section className="panel">
+
           <h2>결제 내역</h2>
-          <p className="muted">아직 결제 내역이 없어요.</p>
+
+          {
+            payments.length === 0 ? (
+
+              <p className="muted">
+                아직 결제 내역이 없어요.
+              </p>
+
+            ) : (
+
+              <div className="payment-history-list">
+
+                {payments.map(payment => (
+
+                  <div
+                    key={payment.paymentId}
+                    className="payment-history-card"
+                  >
+
+                    <div>
+
+                      <h3>
+                        {payment.orderName}
+                      </h3>
+
+                      <p className="muted">
+                        주문번호:
+                        {' '}
+                        {payment.orderId}
+                      </p>
+
+                    </div>
+
+                    <div className="payment-history-right">
+
+                      <b>
+                        {Number(payment.paymentAmount)
+                          .toLocaleString()}원
+                      </b>
+
+                      <span className="payment-status">
+                        {payment.status}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            )
+          }
+
         </section>
 
         <section className="panel expert-banner">

@@ -64,7 +64,11 @@ export default function RequestDetail() {
 
       if (roomId) {
 
-        navigate(`/chat/${roomId}`);
+        setItem(prev => ({
+          ...prev,
+          status: 'CHATTING',
+          chatRoomId: roomId
+        }));
 
       } else {
 
@@ -199,25 +203,43 @@ export default function RequestDetail() {
         {
           String(item.status).toUpperCase() === 'PENDING' && (
 
-          <div className="request-button-group">
+            <div className="request-button-group">
 
-            <button
-              className="reject-button"
-              onClick={reject}
-            >
-              거절하기
-            </button>
+              <button
+                className="reject-button"
+                onClick={reject}
+              >
+                거절하기
+              </button>
 
-            <button
-              className="approve-button"
-              onClick={approve}
-            >
-              수락하기
-            </button>
+              <button
+        className="approve-button"
+        onClick={approve}
+      >
+        수락하기
+      </button>
 
-          </div>
-          )
-      }
+    </div>
+  )
+}
+
+{
+  String(item.status).toUpperCase() === 'CHATTING' && (
+
+    <div className="request-button-group">
+
+      <button
+        className="approve-button"
+        onClick={() =>
+          navigate(`/chat/${item.chatRoomId}`)
+        }
+      >
+        채팅하러 가기
+      </button>
+
+    </div>
+  )
+}
       </div>
 
     </div>
