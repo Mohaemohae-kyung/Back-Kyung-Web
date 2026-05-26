@@ -57,7 +57,7 @@ export default function AIChatbot() {
     setIsLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_LLM_API_URL || 'http://localhost:8000/chat';
+      const apiUrl = import.meta.env.VITE_LLM_API_URL || 'https://can-fly.shop/api/chat/llm';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -89,7 +89,7 @@ export default function AIChatbot() {
         ...prev,
         {
           sender: 'system',
-          text: '⚠️ 서버 연결에 실패했습니다. 로컬 LLM 서버(http://localhost:8000)가 정상 작동 중인지 확인해주세요.'
+          text: '⚠️ AI 서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.'
         }
       ]);
     } finally {
