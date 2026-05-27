@@ -109,50 +109,9 @@ export default function Requests() {
 
       item.status === '수락됨';
 
-    // =========================
-    // 채팅 가능 상태
-    // =========================
-    if (canChat && item.chatRoomId) {
+    if (canChat) {
 
-      try {
-
-        // 읽음 처리
-        await api.patch(
-          `/api/chat/rooms/${item.chatRoomId}/read`
-        );
-
-        // =========================
-        // items unreadCount 초기화
-        // =========================
-        setItems(prev =>
-
-          prev.map(request => {
-
-            if (
-              Number(request.chatRoomId) ===
-              Number(item.chatRoomId)
-            ) {
-              return { ...request, unreadCount: 0 };
-            }
-
-            return request;
-          })
-        );
-
-        // =========================
-        // ✅ 전역 unreadMap도 초기화
-        // =========================
-        setUnreadMap(prev => ({
-          ...prev,
-          [item.chatRoomId]: 0
-        }));
-
-      } catch (err) {
-
-        console.error('읽음 처리 실패', err);
-      }
-
-      navigate(`/chat/${item.chatRoomId}`);
+      navigate(`/requests/${item.requestId || item.id}`);
 
       return;
     }

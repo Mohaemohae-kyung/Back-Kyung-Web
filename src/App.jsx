@@ -20,6 +20,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Experts from './pages/Experts';
 import ExpertDetail from './pages/ExpertDetail';
+import ChatList from './pages/ChatList';
 import Market from './pages/Market';
 import StoreProductDetail from './pages/StoreProductDetail';
 import Requests from './pages/Requests';
@@ -30,6 +31,11 @@ import MyPage from './pages/MyPage';
 import ExpertRegister from './pages/ExpertRegister';
 import RequestDetail from './pages/RequestDetail';
 import { ChatSocketProvider } from './components/ChatSocketContext';
+import PaymentDetail from './pages/PaymentDetail';
+import PaymentPage from './pages/PaymentPage';
+import StoreProductCheckout from './pages/StoreProductCheckout';
+import MockPgPayment from './pages/MockPgPayment';
+import BookingDetail from './pages/BookingDetail';
 import AIChatbot from './components/AIChatbot';
 
 export default function App() {
@@ -111,6 +117,18 @@ export default function App() {
               element={<StoreProductDetail />}
             />
 
+            {/* 마켓 상품 결제 */}
+            <Route
+              path="/store-products/:storeProductId/checkout/:bookingId"
+              element={<StoreProductCheckout />}
+            />
+
+            {/* Mock PG 결제 화면 */}
+            <Route
+              path="/mock-pg"
+              element={<MockPgPayment />}
+            />
+
             {/* 요청관리 */}
             <Route
               path="/requests"
@@ -123,6 +141,9 @@ export default function App() {
               element={<RequestDetail />}
             />
 
+            {/* 채팅목록 */}
+            <Route path="/chat" element={<ChatList />} />
+
             {/* 커뮤니티 */}
             <Route
               path="/community"
@@ -133,6 +154,12 @@ export default function App() {
             <Route
               path="/community/posts/:postId"
               element={<CommunityPostDetail />}
+            />
+
+            {/* 예약 상세 */}
+            <Route
+              path="/bookings/:bookingId"
+              element={<BookingDetail />}
             />
 
             {/* /chat 직접 접근 시 요청관리 이동 */}
@@ -160,6 +187,13 @@ export default function App() {
               path="/expert/register"
               element={<ExpertRegister />}
             />
+
+            <Route
+              path="/payments/:paymentId"
+              element={<PaymentDetail />}
+            />
+
+            <Route path="/payments/:paymentId" element={<PaymentPage />} />
 
           </Routes>
 
