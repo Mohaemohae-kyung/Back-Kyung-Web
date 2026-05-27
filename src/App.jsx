@@ -33,6 +33,9 @@ import RequestDetail from './pages/RequestDetail';
 import { ChatSocketProvider } from './components/ChatSocketContext';
 import PaymentDetail from './pages/PaymentDetail';
 import PaymentPage from './pages/PaymentPage';
+import StoreProductCheckout from './pages/StoreProductCheckout';
+import MockPgPayment from './pages/MockPgPayment';
+import BookingDetail from './pages/BookingDetail';
 
 export default function App() {
 
@@ -113,6 +116,18 @@ export default function App() {
               element={<StoreProductDetail />}
             />
 
+            {/* 마켓 상품 결제 */}
+            <Route
+              path="/store-products/:storeProductId/checkout/:bookingId"
+              element={<StoreProductCheckout />}
+            />
+
+            {/* Mock PG 결제 화면 */}
+            <Route
+              path="/mock-pg"
+              element={<MockPgPayment />}
+            />
+
             {/* 요청관리 */}
             <Route
               path="/requests"
@@ -125,7 +140,7 @@ export default function App() {
               element={<RequestDetail />}
             />
 
-            {/* 채 */}
+            {/* 채팅목록 */}
             <Route path="/chat" element={<ChatList />} />
 
             {/* 커뮤니티 */}
@@ -138,6 +153,12 @@ export default function App() {
             <Route
               path="/community/posts/:postId"
               element={<CommunityPostDetail />}
+            />
+
+            {/* 예약 상세 */}
+            <Route
+              path="/bookings/:bookingId"
+              element={<BookingDetail />}
             />
 
             {/* /chat 직접 접근 시 요청관리 이동 */}

@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import {
+  useNavigate,
+  useParams,
+  useLocation
+} from 'react-router-dom';
 import { Send } from 'lucide-react';
 import SockJS from 'sockjs-client/dist/sockjs';
 import { Client } from '@stomp/stompjs';
@@ -15,6 +19,9 @@ const API_BASE_URL =
 export default function Chat() {
 
   const navigate = useNavigate();
+
+  const location =
+    useLocation();
 
   const { roomId } = useParams();
 
@@ -102,9 +109,21 @@ export default function Chat() {
         const newMessage =
           JSON.parse(message.body);
 
+        console.log(
+          '실시간 메시지',
+          newMessage
+        );
+
         setMessages(prev => [
           ...prev,
-          newMessage
+          {
+            ...newMessage,
+
+            content:
+              newMessage.content ||
+              newMessage.message ||
+              '결제가 완료되었습니다.'
+          }
         ]);
       };
 
@@ -333,13 +352,38 @@ export default function Chat() {
 
   useEffect(() => {
 
-    if (messagesRef.current) {
+    if (
+      !location.state?.paymentCompleted
+    ) return;
 
-      messagesRef.current.scrollTop =
-        messagesRef.current.scrollHeight;
-    }
+    const interval = setInterval(() => {
 
-  }, [messages]);
+      if (!clientRef.current?.connected)
+        return;
+
+      clientRef.current.publish({
+
+        destination:
+          '/pub/chat/message',
+
+        body: JSON.stringify({
+          roomId: currentRoomId,
+
+          senderId: loginUserId,
+
+          type:'TEXT',
+
+          message:'결제가 완료되었습니다.'
+        })
+      });
+
+      clearInterval(interval);
+
+    }, 500);
+
+    return () => clearInterval(interval);
+
+  }, [location.state]);
 
   return (
 
@@ -627,23 +671,6 @@ export default function Chat() {
 
                   if (
                     message.messageType ===
-                    'SYSTEM'
-                  ) {
-
-                    return (
-
-                      <div
-                        key={message.chatMessageId}
-
-                        className="system-message"
-                      >
-                        ── {message.content} ──
-                      </div>
-                    );
-                  }
-
-                  if (
-                    message.messageType ===
                     'PAYMENT_REQUEST'
                   ) {
 
@@ -652,7 +679,7 @@ export default function Chat() {
                       <div
                         key={message.chatMessageId}
 
-                        className={`payment-message-wrap ${
+                        className={`bubble ${
                           Number(message.senderId) ===
                           Number(loginUserId)
                             ? 'me'
@@ -660,48 +687,48 @@ export default function Chat() {
                         }`}
                       >
 
-                        <div className="payment-card">
-
-                          <div className="payment-title">
-                            결제 요청
-                          </div>
-
-                          <div className="payment-content">
-                            {message.content}
-                          </div>
-
-                          {
-                            Number(message.senderId) !==
-                            Number(loginUserId) && (
-
-                              message.paymentStatus === 'PAID' ? (
-
-                                <div className="payment-complete">
-                                  결제 완료
-                                </div>
-
-                              ) : (
-
-                                <button
-                                  className="btn btn-primary payment-btn"
-
-                                  onClick={() => {
-
-                                    console.log(message);
-
-                                    navigate(
-                                      `/payments/${message.paymentId}`
-                                    );
-                                  }}
-                                >
-                                  결제하기
-                                </button>
-
-                              )
-                            )
-                          }
-
+                        <div className="payment-title">
+                          결제 요청
                         </div>
+
+                        <div className="payment-content">
+                          {message.content}
+                        </div>
+
+                        {
+                          Number(message.senderId) !==
+                          Number(loginUserId) && (
+
+                            message.paymentStatus === 'PAID' ? (
+
+                              <div className="payment-complete">
+                                결제 완료
+                              </div>
+
+                            ) : (
+
+                              <button
+                                className="btn btn-primary payment-btn"
+
+                                onClick={() => {
+
+                                  navigate(
+                                    `/payments/${message.paymentId}`,
+                                    {
+                                      state:{
+                                        roomId: currentRoomId
+                                      }
+                                    }
+                                  );
+
+                                }}
+                              >
+                                결제하기
+                              </button>
+
+                            )
+                          )
+                        }
 
                       </div>
                     );
@@ -720,7 +747,7 @@ export default function Chat() {
                       }`}
                     >
                       {
-                        message.content ??
+                        message.content ||
                         message.message
                       }
                     </div>

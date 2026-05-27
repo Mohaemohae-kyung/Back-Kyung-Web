@@ -73,12 +73,23 @@ export default function ChatList() {
 
             <div className="chat-room-top">
 
-              <h3>
-                {
-                  room.requestUserNickname ||
-                  '상대방'
-                }
-              </h3>
+              <div className="chat-user-top">
+
+                <h3>
+                  {
+                    room.requestTitle ||
+                    `상담 #${room.chatRoomId}`
+                  }
+                </h3>
+
+                <span className="chat-user-name">
+                  {
+                    room.requestUserNickname ||
+                    '상대방'
+                  }
+                </span>
+
+              </div>
 
               <span>
                 {room.updatedAt}

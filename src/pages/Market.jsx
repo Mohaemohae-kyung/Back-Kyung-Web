@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ShoppingBag } from 'lucide-react';
 import { api, getStoredUser } from '../api/client';
 import { normalizeList } from '../utils/normalizeList';
-import { CATEGORIES } from '../data/constants';
+import { CATEGORIES, LOCATION_GROUPS } from '../data/constants';
 import { Page, Input, FieldArea, SelectField } from '../components/common';
 
 const SERVICE_TYPES = [
@@ -80,11 +80,30 @@ export default function Market() {
     description: '',
     price: '',
     serviceType: 'ONLINE',
-    serviceRegion: '',
+    locationId: '',
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [activeLocationGroupId, setActiveLocationGroupId] = useState(
+    LOCATION_GROUPS[0]?.id || ''
+  );
+
+  const activeLocationGroup = LOCATION_GROUPS.find(
+    group => String(group.id) === String(activeLocationGroupId)
+  ) || LOCATION_GROUPS[0];
+
+  const selectedLocation = LOCATION_GROUPS
+    .flatMap(group =>
+      group.children.map(child => ({
+        id: child.id,
+        groupName: group.name,
+        name: child.name
+      }))
+    )
+    .find(location => String(location.id) === String(form.locationId));
 
   const load = async () => {
     setMsg('');
@@ -154,8 +173,8 @@ export default function Market() {
       nextErrors.serviceType = '진행 방식을 선택해주세요.';
     }
 
-    if (!form.serviceRegion.trim()) {
-      nextErrors.serviceRegion = '서비스 지역을 입력해주세요.';
+    if (form.serviceType !== 'ONLINE' && !form.locationId) {
+      nextErrors.locationId = '서비스 지역을 선택해주세요.';
     }
 
     if (!form.thumbnailFile) {
@@ -212,7 +231,10 @@ export default function Market() {
         description: form.description.trim(),
         price: Number(form.price),
         serviceType: form.serviceType,
-        serviceRegion: form.serviceRegion.trim(),
+        locationId:
+          form.serviceType === 'ONLINE'
+            ? null
+            : Number(form.locationId),
       });
 
       productCreated = true;
@@ -229,7 +251,7 @@ export default function Market() {
         description: '',
         price: '',
         serviceType: 'ONLINE',
-        serviceRegion: '',
+        locationId: '',
       });
 
       setErrors({});
@@ -295,27 +317,145 @@ export default function Market() {
             <SelectField
               label="진행 방식"
               value={form.serviceType}
-              onChange={v => setForm({ ...form, serviceType: v })}
+              onChange={v =>
+                setForm({
+                  ...form,
+                  serviceType: v,
+                  locationId: v === 'ONLINE' ? '' : form.locationId
+                })
+              }
               options={SERVICE_TYPES}
               error={errors.serviceType}
             />
 
-            <Input
-              label="서비스 지역"
-              value={form.serviceRegion}
-              onChange={v => setForm({ ...form, serviceRegion: v })}
-              placeholder="예: 서울 / 온라인"
-              error={errors.serviceRegion}
-            />
+            {form.serviceType !== 'ONLINE' && (
+              <label className={`field ${errors.locationId ? 'field-error' : ''}`}>
+                <span>서비스 지역</span>
 
-            <label className={`field ${errors.thumbnailFile ? 'field-error' : ''}`}>
+                <div className="tree-field">
+                  <button
+                    type="button"
+                    className={`tree-select-trigger ${
+                      form.locationId ? 'has-value' : 'is-placeholder'
+                    } ${errors.locationId ? 'input-error' : ''}`}
+                    onClick={() => setIsLocationOpen(prev => !prev)}
+                  >
+                    <span className="tree-select-text">
+                      {selectedLocation
+                        ? `${selectedLocation.groupName} / ${selectedLocation.name}`
+                        : '서비스 지역을 선택해주세요'}
+                    </span>
+                    <span className="tree-select-arrow">⌄</span>
+                  </button>
+
+                  {isLocationOpen && (
+                    <div className="tree-select-panel">
+                      <div className="tree-select-groups">
+                        {LOCATION_GROUPS.map(group => (
+                          <button
+                            key={group.id}
+                            type="button"
+                            className={`tree-select-group ${
+                              String(activeLocationGroupId) === String(group.id)
+                                ? 'active'
+                                : ''
+                            }`}
+                            onClick={() => setActiveLocationGroupId(group.id)}
+                          >
+                            {group.name}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="tree-select-items">
+                        {activeLocationGroup?.children?.map(child => (
+                          <button
+                            key={child.id}
+                            type="button"
+                            className={`tree-select-item ${
+                              String(form.locationId) === String(child.id)
+                                ? 'selected'
+                                : ''
+                            }`}
+                            onClick={() => {
+                              setForm(prev => ({
+                                ...prev,
+                                locationId: child.id
+                              }));
+
+                              setErrors(prev => ({
+                                ...prev,
+                                locationId: ''
+                              }));
+
+                              setIsLocationOpen(false);
+                            }}
+                          >
+                            {child.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {errors.locationId && (
+                  <small className="field-error-text">
+                    {errors.locationId}
+                  </small>
+                )}
+              </label>
+            )}
+
+            <div className={`field ${errors.thumbnailFile ? 'field-error' : ''}`}>
               <span>대표 이미지</span>
 
+              <label className="upload-box" htmlFor="market-thumbnail-input">
+                <div className="upload-icon">+</div>
+
+                <div>
+                  <strong>대표 이미지 선택</strong>
+                  <p>등록하기를 누르면 파일 업로드 API를 먼저 호출한 뒤 상품에 연결해요.</p>
+                </div>
+              </label>
+
               <input
+                id="market-thumbnail-input"
                 type="file"
                 accept="image/*"
                 onChange={handleThumbnailChange}
+                style={{ display: 'none' }}
               />
+
+              {form.thumbnailFile && (
+                <div className="upload-list">
+                  <div className="upload-item">
+                    <span>{form.thumbnailFile.name}</span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (form.thumbnailPreviewUrl) {
+                          URL.revokeObjectURL(form.thumbnailPreviewUrl);
+                        }
+
+                        setForm(prev => ({
+                          ...prev,
+                          thumbnailFile: null,
+                          thumbnailPreviewUrl: ''
+                        }));
+
+                        setErrors(prev => ({
+                          ...prev,
+                          thumbnailFile: ''
+                        }));
+                      }}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {form.thumbnailPreviewUrl && (
                 <div className="market-thumbnail-preview">
@@ -326,18 +466,12 @@ export default function Market() {
                 </div>
               )}
 
-              {form.thumbnailFile && (
-                <small className="muted">
-                  선택된 파일: {form.thumbnailFile.name}
-                </small>
-              )}
-
               {errors.thumbnailFile && (
                 <small className="field-error-text">
                   {errors.thumbnailFile}
                 </small>
               )}
-            </label>
+</div>
 
             <FieldArea
               label="상세 설명"
@@ -388,7 +522,11 @@ export default function Market() {
 
             <div className="meta">
               <span>{x.serviceType || '진행 방식 협의'}</span>
-              <span>{x.serviceRegion || '지역 협의'}</span>
+              <span>
+                {x.serviceType === 'ONLINE'
+                  ? '온라인'
+                  : x.locationName || x.mainLocationName || '지역 협의'}
+              </span>
             </div>
 
             <div className="card-footer market-card-footer">

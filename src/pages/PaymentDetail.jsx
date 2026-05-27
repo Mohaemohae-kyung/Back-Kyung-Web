@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import {
+  useParams,
+  useNavigate,
+  useLocation
+} from 'react-router-dom';
 
 import { api } from '../api/client';
 import { Page } from '../components/common';
@@ -7,6 +11,15 @@ import { Page } from '../components/common';
 export default function PaymentDetail() {
 
   const { paymentId } = useParams();
+
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
+
+  const roomId =
+    location.state?.roomId;
 
   const [payment, setPayment] =
     useState(null);
@@ -85,6 +98,19 @@ export default function PaymentDetail() {
       );
 
       alert('결제 완료');
+
+      if (roomId) {
+
+        navigate(
+          `/chat/${roomId}`,
+          {
+            state:{
+              paymentCompleted:true
+            }
+          }
+        );
+
+      }
 
     } catch (err) {
 

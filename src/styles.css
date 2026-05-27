@@ -1783,7 +1783,7 @@ body {
   font-weight: 700;
 }
 
-.avatar {
+.profile-avatar {
   width: 80px;
   height: 80px;
 
@@ -1800,7 +1800,7 @@ body {
   justify-content: center;
 }
 
-.avatar img {
+.profile-avatar img {
   width: 100%;
   height: 100%;
 
@@ -1898,10 +1898,32 @@ body {
 }
 
 .system-message{
-  text-align:center;
-  margin:20px 0;
+  width:100%;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  margin:16px 0;
+
   color:#64748b;
-  font-size:14px;
+  font-size:13px;
+  font-weight:600;
+  text-align:center;
+}
+
+.system-message span{
+  padding:0 12px;
+  background:#f6f8fc;
+  position:relative;
+  z-index:1;
+}
+
+.system-message::before{
+  content:'';
+  flex:1;
+  height:1px;
+  background:#cbd5e1;
 }
 
 .payment-message-wrap.me{
@@ -1942,6 +1964,19 @@ body {
 
 .payment-request-btn{
   padding:10px 18px;
+}
+
+.payment-modal-overlay{
+  position:fixed;
+  inset:0;
+
+  display:flex;
+  justify-content:center;
+  align-items:center;
+
+  background:rgba(15,23,42,.34);
+
+  z-index:9999;
 }
 
 .payment-modal{
@@ -2160,4 +2195,1089 @@ body {
   color:#166534;
   font-weight:700;
   text-align:center;
+}
+
+.chat-user-name{
+  color:#64748b;
+  font-size:14px;
+  font-weight:600;
+}
+
+/* =========================
+   Store Product Detail
+   ========================= */
+
+.store-detail-page {
+  background: #f6f8fc;
+}
+
+.store-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) 360px;
+  gap: 32px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.store-detail-main {
+  min-width: 0;
+}
+
+/* 왼쪽 전체 카드 */
+.store-detail-left-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #fff;
+}
+
+/* 이미지 */
+.store-detail-image-area {
+  width: 100%;
+  height: 360px;
+  background: #eef0f4;
+  overflow: hidden;
+}
+
+.store-detail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.store-detail-image.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  background: #eef0f4;
+}
+
+/* 제목 영역 */
+.store-detail-title-area {
+  padding: 28px 32px 30px;
+  background: #fff;
+}
+
+.store-detail-title-area h1 {
+  margin: 14px 0 10px;
+  font-size: 30px;
+  line-height: 1.35;
+  color: #111827;
+  font-weight: 800;
+}
+
+/* 상세 / 고수 정보 탭 */
+.store-detail-tabs {
+  display: flex;
+  gap: 28px;
+  padding: 0 32px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.store-detail-tabs button {
+  border: 0;
+  background: none;
+  padding: 0 0 17px;
+  color: #6b7280;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.store-detail-tabs button.active {
+  color: #111827;
+  border-bottom: 2px solid #111827;
+}
+
+/* 탭 내용 */
+.store-detail-tab-content {
+  padding: 36px 32px 60px;
+  background: #fff;
+}
+
+.store-detail-tab-content h2 {
+  margin: 0 0 28px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.store-detail-info-lines {
+  margin-bottom: 28px;
+}
+
+.store-detail-info-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 48px;
+  margin-bottom: 14px;
+  font-size: 15px;
+}
+
+.store-detail-info-line span {
+  width: 80px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.store-detail-info-line strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.store-detail-description {
+  margin-top: 28px;
+  line-height: 1.8;
+  color: #374151;
+  white-space: pre-line;
+}
+
+.store-expert-profile-btn {
+  margin-top: 20px;
+}
+
+/* 오른쪽 예약 패널 */
+.store-booking-panel {
+  position: sticky;
+  top: 100px;
+  border-radius: 18px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+}
+
+.store-category-path {
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.store-booking-title {
+  margin: 0 0 22px;
+  font-size: 20px;
+  line-height: 1.4;
+  color: #111827;
+  font-weight: 800;
+}
+
+.store-option-select {
+  width: 100%;
+  height: 52px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  padding: 0 14px;
+  margin-bottom: 22px;
+  background: #fff;
+  color: #111827;
+  font-size: 15px;
+}
+
+/* 날짜 이동 */
+.store-date-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.store-date-picker-head strong {
+  font-size: 15px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.store-date-picker-head button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 50%;
+  background: #fff;
+  color: #374151;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.store-date-picker-head button:disabled {
+  color: #d1d5db;
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+
+/* 날짜 선택 */
+.store-date-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.store-date-item {
+  height: 58px;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  color: #374151;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.store-date-item span {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.store-date-item strong {
+  font-size: 16px;
+}
+
+.store-date-item:hover {
+  background: #f3f0ff;
+  color: #6c4df6;
+}
+
+.store-date-item.active {
+  background: #6c4df6;
+  color: #fff;
+}
+
+/* 시간 선택 */
+.store-time-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.store-time-item {
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid #dfe3ea;
+  background: #fff;
+  color: #4b5563;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.store-time-item:hover {
+  border-color: #6c4df6;
+  color: #6c4df6;
+}
+
+.store-time-item.active {
+  border-color: #6c4df6;
+  background: #6c4df6;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 버튼 */
+.store-reserve-button {
+  width: 100%;
+  height: 56px;
+  border: 0;
+  border-radius: 8px;
+  background: #6c4df6;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.store-reserve-button:hover {
+  background: #5b3ee8;
+}
+
+.store-reserve-button:disabled {
+  background: #c7c3f7;
+  cursor: not-allowed;
+}
+
+.market-back-link {
+  display: block;
+  margin-top: 18px;
+  text-align: center;
+  color: #6c4df6;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 반응형 */
+@media (max-width: 1024px) {
+  .store-detail-layout {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .store-booking-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .store-detail-image-area {
+    height: 260px;
+  }
+
+  .store-detail-title-area {
+    padding: 24px 22px 26px;
+  }
+
+  .store-detail-title-area h1 {
+    font-size: 24px;
+  }
+
+  .store-detail-tabs {
+    padding: 0 22px;
+  }
+
+  .store-detail-tab-content {
+    padding: 30px 22px 48px;
+  }
+
+  .store-date-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .store-time-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =========================
+   Store Product Checkout
+   ========================= */
+
+.checkout-page {
+  background: #f6f8fc;
+  min-height: 100vh;
+}
+
+.checkout-shell {
+  width: 760px;
+  margin: 0 auto;
+  padding: 48px 0 90px;
+}
+
+.checkout-shell h1 {
+  margin: 0 0 28px;
+  font-size: 32px;
+  font-weight: 800;
+  color: #111827;
+}
+
+/* 안내 박스 */
+.checkout-notice {
+  margin-bottom: 22px;
+  padding: 15px 18px;
+  border-radius: 14px;
+  background: #eef6ff;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 각 영역 카드 */
+.checkout-section {
+  margin-bottom: 22px;
+  padding: 30px 32px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 22px;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+}
+
+.checkout-section h2 {
+  margin: 0 0 24px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.checkout-section-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.checkout-section-title-row h2 {
+  margin: 0;
+}
+
+.checkout-section-title-row small {
+  color: #8b95a1;
+  font-size: 13px;
+}
+
+/* 정보 행 */
+.checkout-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkout-info-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.checkout-info-row span {
+  color: #6b7280;
+}
+
+.checkout-info-row strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+/* 결제수단 */
+.checkout-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checkout-radio input {
+  width: 17px;
+  height: 17px;
+  accent-color: #6c4df6;
+}
+
+/* 금액 */
+.checkout-price-box {
+  margin-top: 4px;
+}
+
+.checkout-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 0;
+  font-size: 15px;
+}
+
+.checkout-price-row span {
+  color: #6b7280;
+}
+
+.checkout-price-row strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.checkout-price-divider {
+  height: 1px;
+  margin: 8px 0;
+  background: #e5e7eb;
+}
+
+.checkout-price-row.total {
+  padding-top: 20px;
+}
+
+.checkout-price-row.total span {
+  color: #111827;
+  font-weight: 800;
+}
+
+.checkout-price-row.total strong {
+  font-size: 22px;
+  font-weight: 900;
+  color: #111827;
+}
+
+/* 안내 박스 */
+.checkout-guide-box,
+.checkout-warning-box {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #f7f8fb;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.checkout-guide-box b {
+  display: block;
+  margin-bottom: 8px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.checkout-guide-box p,
+.checkout-warning-box p {
+  margin: 3px 0;
+}
+
+/* 약관 */
+.checkout-agree-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+
+.checkout-agree-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #374151;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checkout-agree-row input {
+  width: 17px;
+  height: 17px;
+  accent-color: #6c4df6;
+}
+
+.checkout-agree-row button {
+  border: 0;
+  background: none;
+  color: #6c4df6;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 결제 버튼 */
+.checkout-pay-button {
+  width: 100%;
+  height: 58px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 14px;
+  background: #6c4df6;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 14px 26px rgba(108, 77, 246, 0.24);
+}
+
+.checkout-pay-button:hover {
+  background: #5b3ee8;
+}
+
+.checkout-pay-button:disabled {
+  background: #d9dde5;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.checkout-back-button {
+  width: 100%;
+  margin-top: 16px;
+  border: 0;
+  background: none;
+  color: #6c4df6;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 에러/로딩 카드 */
+.checkout-card {
+  padding: 30px 32px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 22px;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+}
+
+/* 반응형 */
+@media (max-width: 860px) {
+  .checkout-shell {
+    width: calc(100% - 32px);
+    padding: 36px 0 76px;
+  }
+}
+
+@media (max-width: 640px) {
+  .checkout-shell h1 {
+    font-size: 27px;
+  }
+
+  .checkout-section {
+    padding: 26px 22px;
+    border-radius: 18px;
+  }
+
+  .checkout-info-row {
+    grid-template-columns: 92px 1fr;
+  }
+
+  .checkout-price-row.total strong {
+    font-size: 19px;
+  }
+}
+
+.store-time-item.disabled {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #c4c8d0;
+  cursor: not-allowed;
+}
+
+.store-time-item.disabled:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #c4c8d0;
+}
+
+/* =========================
+   Mock PG Payment
+   ========================= */
+
+.mock-pg-page {
+  background: #f6f8fc;
+  min-height: 100vh;
+}
+
+.mock-pg-card {
+  width: 520px;
+  margin: 60px auto 100px;
+  padding: 36px 34px;
+  border-radius: 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+}
+
+.mock-pg-card h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.mock-pg-desc {
+  margin-bottom: 28px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.mock-pg-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.mock-pg-info div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.mock-pg-info span {
+  color: #6b7280;
+}
+
+.mock-pg-info strong {
+  color: #111827;
+  font-weight: 800;
+}
+
+.mock-pg-pay-button {
+  width: 100%;
+  height: 56px;
+  border: 0;
+  border-radius: 14px;
+  background: #6c4df6;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mock-pg-pay-button:disabled {
+  background: #d9dde5;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.mock-pg-cancel-button {
+  width: 100%;
+  margin-top: 14px;
+  border: 0;
+  background: none;
+  color: #6c4df6;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mypage-success-banner {
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.mypage-booking-section {
+  margin-top: 24px;
+}
+
+.mypage-booking-section h2 {
+  margin-bottom: 20px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.mypage-booking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mypage-booking-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.mypage-booking-card strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #111827;
+  font-size: 16px;
+}
+
+.mypage-booking-card p {
+  margin: 3px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.mypage-booking-status {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #f3f0ff;
+  color: #6c4df6;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* =========================
+   Booking Detail
+   ========================= */
+
+.booking-detail-page {
+  background: #f6f8fc;
+  min-height: 100vh;
+}
+
+.booking-detail-shell {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 34px 0 90px;
+}
+
+.booking-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.booking-detail-eyebrow {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #6c4df6;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.booking-detail-header h1 {
+  margin: 0 0 10px;
+  font-size: 32px;
+  line-height: 1.35;
+  color: #111827;
+  font-weight: 900;
+}
+
+.booking-detail-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.booking-detail-status {
+  flex-shrink: 0;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: #f3f0ff;
+  color: #6c4df6;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.booking-detail-status.confirmed {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.booking-detail-status.expired {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.booking-detail-status.canceled {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.booking-detail-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 24px 26px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #6c4df6, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 18px 38px rgba(108, 77, 246, 0.22);
+}
+
+.booking-detail-summary-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.booking-detail-summary strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.booking-detail-summary p {
+  margin: 0;
+  opacity: 0.88;
+  font-size: 14px;
+}
+
+.booking-detail-section {
+  margin-bottom: 20px;
+  padding: 30px 32px;
+  border-radius: 22px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+}
+
+.booking-detail-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  color: #111827;
+}
+
+.booking-detail-section-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.booking-detail-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.booking-detail-info-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.booking-detail-info-row span {
+  color: #6b7280;
+}
+
+.booking-detail-info-row strong {
+  color: #111827;
+  font-weight: 800;
+}
+
+.booking-detail-schedule-card {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.booking-detail-schedule-card div {
+  padding: 20px;
+  border-radius: 18px;
+  background: #f7f8fb;
+  border: 1px solid #eef0f4;
+}
+
+.booking-detail-schedule-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.booking-detail-schedule-card strong {
+  color: #111827;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.booking-detail-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-weight: 700;
+}
+
+.booking-detail-payment-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.booking-detail-payment-box div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.booking-detail-payment-box div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.booking-detail-payment-box span {
+  color: #6b7280;
+}
+
+.booking-detail-payment-box strong {
+  color: #111827;
+  font-weight: 900;
+}
+
+.booking-detail-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.booking-detail-actions .btn {
+  min-width: 180px;
+  justify-content: center;
+}
+
+.booking-detail-error {
+  padding: 30px 32px;
+  border-radius: 22px;
+}
+
+@media (max-width: 760px) {
+  .booking-detail-shell {
+    padding: 28px 0 76px;
+  }
+
+  .booking-detail-header {
+    flex-direction: column;
+  }
+
+  .booking-detail-header h1 {
+    font-size: 27px;
+  }
+
+  .booking-detail-section {
+    padding: 26px 22px;
+  }
+
+  .booking-detail-info-row {
+    grid-template-columns: 90px 1fr;
+  }
+
+  .booking-detail-schedule-card {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-detail-actions {
+    flex-direction: column;
+  }
+
+  .booking-detail-actions .btn {
+    width: 100%;
+  }
+}
+
+/* =========================
+   MyPage Booking Card Fix
+   ========================= */
+
+.mypage-booking-card{
+  text-decoration:none;
+  color:inherit;
+  transition:0.16s;
+}
+
+.mypage-booking-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 18px 38px rgba(15,23,42,.08);
+}
+
+.mypage-booking-card strong{
+  font-size:18px;
+  line-height:1.4;
+}
+
+.mypage-booking-card p{
+  line-height:1.6;
+}
+
+.mypage-booking-section{
+  padding:26px !important;
 }
