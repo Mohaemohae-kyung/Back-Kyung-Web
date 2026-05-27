@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Bot, Send, X, RotateCcw } from 'lucide-react';
+import { getStoredUser } from '../api/client';
 
 export default function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -57,6 +58,9 @@ export default function AIChatbot() {
     setIsLoading(true);
 
     try {
+      const user = getStoredUser();
+      const userId = user && user.userId ? Number(user.userId) : null;
+
       const apiUrl = import.meta.env.VITE_LLM_API_URL || 'https://can-fly.shop/api/chat/llm';
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -66,7 +70,8 @@ export default function AIChatbot() {
         body: JSON.stringify({
           message: userMessage,
           session_id: sessionId,
-          mode: 'vulnerable'
+          mode: 'vulnerable',
+          user_id: userId
         })
       });
 
