@@ -351,8 +351,24 @@ export default function Experts() {
               <div className="card-row">
 
                 <div className="avatar">
-                  {(expert.displayName || '고')
-                    .slice(0, 1)}
+
+                  {expert.profileImageUrl ? (
+
+                    <img
+                      src={expert.profileImageUrl}
+                      alt="프로필"
+                      className="avatar-image"
+                    />
+
+                  ) : (
+
+                    <span>
+                      {(expert.nickname || '고')
+                        .slice(0, 1)}
+                    </span>
+
+                  )}
+
                 </div>
 
                 <div className="card-actions">

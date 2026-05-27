@@ -287,7 +287,24 @@ function ExpertMini({ expert }) {
     >
 
       <div className="avatar">
-        {(expert.displayName || '고').slice(0, 1)}
+
+        {expert.profileImageUrl ? (
+
+          <img
+            src={expert.profileImageUrl}
+            alt="프로필"
+            className="profile-image"
+          />
+
+        ) : (
+
+          <span>
+            {(expert.displayName || '고')
+              .slice(0, 1)}
+          </span>
+
+        )}
+
       </div>
 
       <div className="mini-body">
