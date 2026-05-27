@@ -149,7 +149,24 @@ export default function ExpertDetail() {
           <div className="profile-top">
 
             <div className="avatar large">
-              {(expert.displayName || '고').slice(0, 1)}
+
+              {expert.profileImageUrl ? (
+
+                <img
+                  src={expert.profileImageUrl}
+                  alt="프로필"
+                  className="profile-image"
+                />
+
+              ) : (
+
+                <span>
+                  {(expert.displayName || '고')
+                    .slice(0, 1)}
+                </span>
+
+              )}
+
             </div>
 
             <div>
