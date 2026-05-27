@@ -19,6 +19,7 @@ import {
 } from '../components/common';
 
 import FavoriteToggle from '../components/FavoriteToggle';
+import PortfolioGallery from '../components/PortfolioGallery';
 
 export default function ExpertDetail() {
 
@@ -80,9 +81,9 @@ export default function ExpertDetail() {
         form.budget === ''
           ? null
           : Number(
-              String(form.budget)
-                .replace(/[^0-9]/g, '')
-            );
+            String(form.budget)
+              .replace(/[^0-9]/g, '')
+          );
 
       await api.post('/api/service-requests', {
 
@@ -152,7 +153,6 @@ export default function ExpertDetail() {
             </div>
 
             <div>
-
               <span className="badge">
                 검증된 고수
               </span>
@@ -237,6 +237,10 @@ export default function ExpertDetail() {
             </p>
 
           </div>
+
+          {expert.portfolioWebViewUrl && (
+            <PortfolioGallery urlPath={expert.portfolioWebViewUrl} />
+          )}
 
         </div>
 
