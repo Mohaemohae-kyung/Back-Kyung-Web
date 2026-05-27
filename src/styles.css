@@ -3747,7 +3747,13 @@ body {
 
   border-radius:18px;
 
-  background:#fff;
+  background:linear-gradient(
+    135deg,
+    var(--primary),
+    #8b5cf6
+  );
+
+  color:#fff;
 
   border:1px solid #e5e7eb;
 
@@ -3759,6 +3765,9 @@ body {
   justify-content:center;
 
   flex:0 0 auto;
+
+  font-weight:800;
+  font-size:22px;
 }
 
 .profile-image{

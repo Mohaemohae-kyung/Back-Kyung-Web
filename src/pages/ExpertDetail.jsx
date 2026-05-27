@@ -161,7 +161,7 @@ export default function ExpertDetail() {
               ) : (
 
                 <span>
-                  {(expert.displayName || '고')
+                  {(expert.nickname || '고')
                     .slice(0, 1)}
                 </span>
 
