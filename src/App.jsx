@@ -36,6 +36,7 @@ import PaymentPage from './pages/PaymentPage';
 import StoreProductCheckout from './pages/StoreProductCheckout';
 import MockPgPayment from './pages/MockPgPayment';
 import BookingDetail from './pages/BookingDetail';
+import AIChatbot from './components/AIChatbot';
 
 export default function App() {
 
@@ -199,6 +200,7 @@ export default function App() {
         </main>
 
         <Footer />
+        <AIChatbot />
       </ChatSocketProvider>          
     </BrowserRouter>
   );
