@@ -1,20 +1,73 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { CalendarDays, Bookmark, PenLine, UserRound, UserX } from 'lucide-react';
-import { api, getStoredUser, updateStoredUser, clearAuth } from '../api/client';
-import { Page, Stat, Input } from '../components/common';
+import { Link, useLocation } from 'react-router-dom';
+
+import {
+  CalendarDays,
+  Bookmark,
+  PenLine,
+  UserRound,
+  UserX,
+  Ticket
+} from 'lucide-react';
+
+import {
+  api,
+  getStoredUser,
+  updateStoredUser,
+  clearAuth
+} from '../api/client';
+
+import {
+  Page,
+  Stat,
+  Input
+} from '../components/common';
+
+const formatBookingDateTime = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const bookingStatusLabel = (status) => {
+  if (status === 'CONFIRMED') return '예약 확정';
+  if (status === 'PENDING_PAYMENT') return '결제 대기';
+  if (status === 'EXPIRED') return '만료';
+  if (status === 'CANCELED') return '취소';
+  return status || '-';
+};
 
 export default function MyPage() {
   const [userInfo, setUserInfo] = useState(getStoredUser() || {});
   const [summary, setSummary] = useState(null);
   const [favoriteExperts, setFavoriteExperts] = useState([]);
   const [showFavorites, setShowFavorites] = useState(false);
-  const [form, setForm] = useState({ name: '', nickname: '', phone: '', profileImageUrl: '' });
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-
+  const [form, setForm] = useState({
+    name: '',
+    nickname: '',
+    phone: '',
+    profileImageUrl: ''
+  });
   const [withdrawPassword, setWithdrawPassword] = useState('');
   const [msg, setMsg] = useState('');
 
+  const [payments, setPayments] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [bookingMsg, setBookingMsg] = useState('');
+  
+  const [coupons, setCoupons] = useState([]);
+
+  const location = useLocation();
   const favoriteCount = favoriteExperts.length;
 
   const extractResult = res => {
@@ -29,48 +82,81 @@ export default function MyPage() {
     setFavoriteExperts(extractResult(res));
   };
 
+  const loadBookings = async () => {
+    try {
+      const res = await api.get('/api/bookings/me');
+      const list = Array.isArray(res?.result) ? res.result : res?.result?.content || [];
+      setBookings(list);
+    } catch (err) {
+      setBookingMsg(err.message || '예약 내역을 불러오지 못했습니다.');
+    }
+  };
+
+  const loadCoupons = async () => {
+    try {
+      const res = await api.get('/api/coupons/me');
+      const list = Array.isArray(res?.result) ? res.result : res?.result?.content || [];
+      setCoupons(list);
+    } catch (err) {
+      setCoupons([]);
+    }
+  };
+
   useEffect(() => {
-    api.get('/api/users/me').then(res => {
-      const data = res?.result || res?.data?.result || res;
-      setUserInfo(data);
-      setForm({
-        name: data.name || '',
-        nickname: data.nickname || '',
-        phone: data.phone || '',
-        profileImageUrl: data.profileImageUrl || '',
-      });
-      updateStoredUser(data);
-    }).catch(() => {});
+    api.get('/api/users/me')
+      .then(res => {
+        const data = res?.result || res?.data?.result || res;
+        setUserInfo(data);
+        setForm({
+          name: data.name || '',
+          nickname: data.nickname || '',
+          phone: data.phone || '',
+          profileImageUrl: data.profileImageUrl || '',
+        });
+        updateStoredUser(data);
+
+        if (data.role !== 'EXPERT') {
+          api.get('/api/payments/me')
+            .then(res => {
+              const list = Array.isArray(res?.result) ? res.result : res?.result?.content || [];
+              setPayments(list);
+            })
+            .catch(() => {
+              setPayments([]);
+            });
+
+          loadCoupons();
+        }
+      })
+      .catch(() => {});
 
     api.get('/api/mypage')
       .then(res => setSummary(res?.result || res?.data?.result || res))
       .catch(() => {});
 
     loadFavorites().catch(() => setFavoriteExperts([]));
+    loadBookings();
   }, []);
 
   const toggleFavoriteList = async () => {
     setMsg('');
-
     if (showFavorites) {
       setShowFavorites(false);
       return;
     }
-
     try {
       await loadFavorites();
       setShowFavorites(true);
     } catch {
       setFavoriteExperts([]);
       setShowFavorites(true);
-      setMsg('찜한 고수 목록을 불러오지 못했어요.');
+      setMsg('찜한 고수 목록을 불러오지 못했습니다.');
     }
   };
 
   const updateProfile = async e => {
     e.preventDefault();
     setMsg('');
-
     try {
       const res = await api.patch('/api/users/me', form);
       const data = res?.result || res?.data?.result || res;
@@ -82,32 +168,9 @@ export default function MyPage() {
     }
   };
 
-  const changePassword = async e => {
-    e.preventDefault();
-    setMsg('');
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setMsg('새로 입력한 비밀번호가 서로 일치하지 않아요.');
-      return;
-    }
-
-    try {
-      await api.post('/api/auth/password/change', {
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
-      });
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setMsg('비밀번호가 성공적으로 변경되었습니다.');
-    } catch (err) {
-      setMsg(err.message || '비밀번호 변경에 실패했어요.');
-    }
-  };
-
   const withdraw = async e => {
     e.preventDefault();
-
-    if (!confirm('정말 회원탈퇴를 진행할까요?')) return;
-
+    if (!confirm('정말 회원탈퇴를 진행하시겠습니까?')) return;
     try {
       await api.delete('/api/users/me', { password: withdrawPassword });
       clearAuth();
@@ -118,14 +181,41 @@ export default function MyPage() {
     }
   };
 
+  const downloadWelcomeCoupon = async () => {
+    try {
+      await api.post('/api/coupons/welcome');
+      const updatedUser = { ...userInfo, welcomeCouponAvailable: 'N' };
+      setUserInfo(updatedUser);
+      updateStoredUser(updatedUser);
+      loadCoupons();
+      alert('웰컴 쿠폰이 발급되었습니다.');
+    } catch (err) {
+      alert(err.message || '쿠폰 발급에 실패했습니다.');
+    }
+  };
+
+  const confirmedBookings = bookings.filter(
+    booking => (booking.status || booking.bookingStatus) === 'CONFIRMED'
+  );
+
   return (
-    <Page title="마이페이지" desc="내 정보와 요청, 결제 내역을 한 번에 확인합니다.">
+    <Page title="마이페이지" desc="내 정보와 요청, 결제 내역을 확인합니다.">
       {msg && <p className="message">{msg}</p>}
+
+      {location.state?.paymentCompleted && (
+        <div className="mypage-success-banner">
+          결제가 완료되었습니다. 예약 내역에서 확인할 수 있습니다.
+        </div>
+      )}
 
       <div className="mypage-grid">
         <div className="panel profile-card">
           <div className="avatar large">
-            {(userInfo.nickname || userInfo.name || 'U').slice(0, 1)}
+            {userInfo.profileImageUrl ? (
+              <img src={userInfo.profileImageUrl} alt="프로필" className="profile-image" />
+            ) : (
+              (userInfo.nickname || userInfo.name || 'U').slice(0, 1)
+            )}
           </div>
           <h2>{userInfo.nickname || userInfo.name || '사용자'}</h2>
           <p>{userInfo.email || '로그인 후 이용 정보를 확인할 수 있습니다.'}</p>
@@ -134,13 +224,11 @@ export default function MyPage() {
 
         <div className="stats-grid">
           <Stat icon={<CalendarDays />} value={summary?.inProgressCount ?? 0} label="진행중" />
-
           <button type="button" className="card stat-card stat-button" onClick={toggleFavoriteList}>
             <span><Bookmark size={22} /></span>
             <b>{favoriteCount}</b>
             <small>찜한 고수</small>
           </button>
-
           <Stat icon={<PenLine />} value={summary?.postCount ?? 0} label="작성글" />
         </div>
       </div>
@@ -149,27 +237,21 @@ export default function MyPage() {
         <section className="panel favorite-panel">
           <div className="card-row">
             <h2>찜한 고수</h2>
-            <button type="button" className="btn btn-ghost" onClick={() => setShowFavorites(false)}>
-              닫기
-            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => setShowFavorites(false)}>닫기</button>
           </div>
-
           <div className="expert-grid market-list-spacer">
             {favoriteExperts.length ? (
               favoriteExperts.map((expert, i) => {
                 const expertId = expert.expertProfileId || expert.expertId || expert.id;
                 const name = expert.displayName || expert.expertName || expert.name || expert.nickname || '고수';
-
                 return (
                   <Link className="card" to={`/experts/${expertId}`} key={expertId || i}>
                     <div className="card-row">
                       <div className="avatar">{name.slice(0, 1)}</div>
                       <span className="badge">찜한 고수</span>
                     </div>
-
                     <h3>{name}</h3>
                     <p>{expert.introduction || expert.description || '고수 정보를 확인해보세요.'}</p>
-
                     <div className="meta">
                       <span>★ {expert.rating || '0.0'}</span>
                       <span>{expert.categoryName || expert.category || expert.mainCategoryName || '서비스'}</span>
@@ -179,21 +261,100 @@ export default function MyPage() {
                 );
               })
             ) : (
-              <p className="muted">아직 찜한 고수가 없어요.</p>
+              <p className="muted">찜한 고수가 없습니다.</p>
             )}
           </div>
         </section>
       )}
 
       <div className="mypage-sections">
-        <section className="panel">
-          <h2>결제 내역</h2>
-          <p className="muted">아직 결제 내역이 없어요.</p>
+        
+        {userInfo.role !== 'EXPERT' && (
+          <section className="panel">
+            <h2><Ticket size={20} /> 내 쿠폰</h2>
+            {userInfo.welcomeCouponAvailable === 'Y' && (
+              <div className="welcome-coupon-banner">
+                <p>신규 가입 웰컴 쿠폰을 발급받을 수 있습니다.</p>
+                <button type="button" className="btn btn-primary" onClick={downloadWelcomeCoupon}>
+                  웰컴 쿠폰 발급받기
+                </button>
+              </div>
+            )}
+            
+            {coupons.length === 0 ? (
+              <p className="muted">보유 중인 쿠폰이 없습니다.</p>
+            ) : (
+              <div className="coupon-list">
+                {coupons.map(coupon => (
+                  <div key={coupon.userCouponId || coupon.id} className="card payment-history-card">
+                    <div>
+                      <h3>{coupon.coupon?.name || coupon.name || '할인 쿠폰'}</h3>
+                      <p className="muted">
+                        사용 기한: {coupon.expiredAt ? formatBookingDateTime(coupon.expiredAt) : '제한 없음'}
+                      </p>
+                    </div>
+                    <div className="payment-history-right">
+                      <b>
+                        {Number(coupon.coupon?.discountAmount || coupon.discountAmount || 0).toLocaleString()}원
+                      </b>
+                      <span className="payment-status">{coupon.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className="panel mypage-booking-section">
+          <h2><CalendarDays size={20} /> 예약 내역</h2>
+          {bookingMsg && <p className="error-text">{bookingMsg}</p>}
+          {!bookingMsg && confirmedBookings.length === 0 && (
+            <p className="muted">결제 완료된 예약 내역이 없습니다.</p>
+          )}
+          <div className="mypage-booking-list">
+            {confirmedBookings.map((booking) => (
+              <Link key={booking.bookingId} to={`/bookings/${booking.bookingId}`} className="mypage-booking-card">
+                <div>
+                  <strong>{booking.productTitle || booking.serviceTitle || '예약 상품'}</strong>
+                  <p>{formatBookingDateTime(booking.startAt)} {' ~ '} {formatBookingDateTime(booking.endAt)}</p>
+                  <p>{booking.locationName || booking.locationText || '지역 미정'}</p>
+                </div>
+                <span className="mypage-booking-status">
+                  {bookingStatusLabel(booking.status || booking.bookingStatus)}
+                </span>
+              </Link>
+            ))}
+          </div>
         </section>
+
+        {userInfo.role !== 'EXPERT' && (
+          <section className="panel">
+            <h2>결제 내역</h2>
+            {payments.length === 0 ? (
+              <p className="muted">결제 내역이 없습니다.</p>
+            ) : (
+              <div className="payment-history-list">
+                {payments.map(payment => (
+                  <div key={payment.paymentId} className="payment-history-card">
+                    <div>
+                      <h3>{payment.orderName}</h3>
+                      <p className="muted">주문번호: {payment.orderId}</p>
+                    </div>
+                    <div className="payment-history-right">
+                      <b>{Number(payment.paymentAmount).toLocaleString()}원</b>
+                      <span className="payment-status">{payment.paymentStatus}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="panel expert-banner">
           <div>
-            <h2>고수로 활동하고 싶나요?</h2>
+            <h2>고수로 활동하시겠습니까?</h2>
             <p>전문가 프로필을 등록하면 고객에게 견적 요청을 받을 수 있습니다.</p>
           </div>
           <Link className="btn btn-primary" to="/expert/register">고수 활동 시작하기</Link>
@@ -207,16 +368,6 @@ export default function MyPage() {
             <Input label="전화번호" value={form.phone} onChange={v => setForm({ ...form, phone: v })} />
             <Input label="프로필 이미지 URL" value={form.profileImageUrl} onChange={v => setForm({ ...form, profileImageUrl: v })} />
             <button className="btn btn-primary">프로필 저장</button>
-          </form>
-        </section>
-
-        <section className="panel">
-          <h2>비밀번호 변경</h2>
-          <form className="form" onSubmit={changePassword}>
-            <Input label="현재 비밀번호" type="password" value={passwordForm.currentPassword} onChange={v => setPasswordForm({ ...passwordForm, currentPassword: v })} placeholder="현재 사용 중인 비밀번호를 입력하세요." />
-            <Input label="새 비밀번호" type="password" value={passwordForm.newPassword} onChange={v => setPasswordForm({ ...passwordForm, newPassword: v })} placeholder="새로운 비밀번호를 입력하세요 (8자~20자)." />
-            <Input label="새 비밀번호 확인" type="password" value={passwordForm.confirmPassword} onChange={v => setPasswordForm({ ...passwordForm, confirmPassword: v })} placeholder="새로운 비밀번호를 다시 입력하세요." />
-            <button className="btn btn-primary">비밀번호 변경</button>
           </form>
         </section>
 
