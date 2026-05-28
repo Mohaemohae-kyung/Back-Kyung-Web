@@ -402,13 +402,13 @@ export default function ExpertDetail() {
                             서비스 선택
                           </option>
 
-                          {expert.services?.map(service => (
+                          {expert.categoryNames?.map((name, idx) => (
 
                             <option
-                              key={service.categoryId}
-                              value={service.categoryId}
+                              key={expert.expertServiceIds?.[idx]}
+                              value={expert.categoryIds?.[idx]}
                             >
-                              {service.categoryName}
+                              {name}
                             </option>
 
                           ))}

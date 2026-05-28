@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export default function PortfolioGallery({ urlPath }) {
-    const [imageUrl, setImageUrl] = useState('');
+    const [imageUrl, setImageUrl] = useState(null);
     const [htmlContent, setHtmlContent] = useState('');
     const [rawText, setRawText] = useState('');
     const [viewType, setViewType] = useState('image');
@@ -100,11 +100,17 @@ export default function PortfolioGallery({ urlPath }) {
                 {viewType === 'image' && (
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', backgroundColor: '#fff' }}>
                         <div style={{ width: '100%', height: '200px', overflow: 'hidden', backgroundColor: '#f7fafc' }}>
-                            <img
-                                src={imageUrl}
-                                alt="Portfolio Gallery Item"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
+                            {imageUrl && (
+                                <img
+                                    src={imageUrl}
+                                    alt="Portfolio Gallery Item"
+                                    style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                    }}
+                                />
+                                )}
                         </div>
                     </div>
                 )}
