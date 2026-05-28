@@ -41,8 +41,9 @@ export default function PaymentSuccess() {
         const encryptedDto = e2eCrypto.encryptPayload(payloadData, rsaPublicKey);
         console.log('2. Confirm E2E 암호문 전송:', encryptedDto);
 
-        // 4) 메인 백엔드(Spring Proxy)로 최종 승인 요청 전송
-        const confirmRes = await api.post('/api/payments/confirm', encryptedDto);
+        console.log('2. E2E Confirm 암호화 완료, 서버(프록시)로 전송:', encryptedDto);
+        const confirmRes = await api.post('/api/payments/confirm-e2e', encryptedDto);
+
         const cipherTextFromDb = confirmRes?.result?.cipherText || confirmRes?.data?.cipherText || confirmRes?.cipherText;
 
         if (!cipherTextFromDb) {
