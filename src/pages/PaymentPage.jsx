@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { api } from '../api/client';
 
@@ -10,6 +10,8 @@ export default function PaymentPage() {
   console.log(paymentId);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const roomId = location.state?.roomId;
 
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +58,7 @@ export default function PaymentPage() {
       const tossPayments = window.TossPayments('test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E');
       
       const orderId = payment?.orderId;
-      const amount = payment?.amount;
+      const amount = payment?.paymentAmount || payment?.amount;
       
       if (!orderId || !amount) {
         alert('결제 정보가 유효하지 않습니다.');
@@ -67,9 +69,9 @@ export default function PaymentPage() {
       tossPayments.requestPayment('카드', {
         amount: amount,
         orderId: orderId,
-        orderName: '결제 서비스', // 실제로는 payment?.orderName 등 활용 가능
+        orderName: payment?.orderName || '결제 서비스', // 실제로는 payment?.orderName 등 활용 가능
         customerName: '고객명', // 실제 유저 이름이 있다면 연동
-        successUrl: window.location.origin + '/payment/success',
+        successUrl: window.location.origin + `/payment/success?roomId=${roomId || ''}`,
         failUrl: window.location.origin + '/payment/fail',
       }).catch(function (error) {
         if (error.code === 'USER_CANCEL') {

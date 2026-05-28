@@ -31,7 +31,13 @@ export default function PaymentSuccess() {
         // api.js(client.js) 내부에서 에러(isSuccess=false) 발생 시 자동으로 catch 블록으로 넘어가므로
         // 여기까지 코드가 도달했다면 결제가 성공한 것입니다.
         alert('결제가 성공적으로 완료되었습니다.');
-        navigate('/mypage'); // 마이페이지나 결제 완료 페이지로 이동
+        
+        const roomId = searchParams.get('roomId');
+        if (roomId) {
+          navigate(`/chat/${roomId}`, { state: { paymentCompleted: true } });
+        } else {
+          navigate('/mypage'); // 마이페이지나 결제 완료 페이지로 이동
+        }
       } catch (err) {
         console.error(err);
         setErrorMsg(err.response?.data?.message || '메인 서버와 통신할 수 없습니다.');
