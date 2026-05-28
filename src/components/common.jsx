@@ -140,10 +140,18 @@ export function TreeSelectField({
   groups = [],
   placeholder = '선택해주세요',
   error,
-  selectRef
+  selectRef,
+  disabled = false,
+  disabledIds = []
 }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
+
+  const disabledIdSet = useMemo(() => {
+    return new Set(
+      disabledIds.map((id) => String(id))
+    );
+  }, [disabledIds]);
 
   const selectedInfo = useMemo(() => {
     for (const group of groups) {
@@ -181,7 +189,10 @@ export function TreeSelectField({
     };
 
     document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+
+    return () => {
+      document.removeEventListener('mousedown', close);
+    };
   }, []);
 
   const activeGroup = groups.find(
@@ -189,24 +200,39 @@ export function TreeSelectField({
   );
 
   return (
-    <label className={`field tree-field ${error ? 'field-error' : ''}`} ref={wrapperRef}>
+    <label
+      className={`field tree-field ${error ? 'field-error' : ''}`}
+      ref={wrapperRef}
+    >
       <span>{label}</span>
 
       <button
         ref={selectRef}
         type="button"
-        className={`tree-select-trigger ${selectedInfo ? 'has-value' : 'is-placeholder'} ${error ? 'input-error' : ''}`}
-        onClick={() => setOpen((prev) => !prev)}
+        disabled={disabled}
+        className={`tree-select-trigger ${
+          selectedInfo ? 'has-value' : 'is-placeholder'
+        } ${error ? 'input-error' : ''} ${
+          disabled ? 'is-disabled' : ''
+        }`}
+        onClick={() => {
+          if (!disabled) {
+            setOpen((prev) => !prev);
+          }
+        }}
       >
         <span className="tree-select-text">
           {selectedInfo
             ? `${selectedInfo.groupName} > ${selectedInfo.childName}`
             : placeholder}
         </span>
-        <span className="tree-select-arrow">{open ? '⌃' : '⌄'}</span>
+
+        <span className="tree-select-arrow">
+          {open ? '⌃' : '⌄'}
+        </span>
       </button>
 
-      {open && (
+      {open && !disabled && (
         <div className="tree-select-panel">
           <div className="tree-select-groups">
             {groups.map((group) => (
@@ -214,7 +240,9 @@ export function TreeSelectField({
                 key={group.id}
                 type="button"
                 className={`tree-select-group ${
-                  String(activeGroupId) === String(group.id) ? 'active' : ''
+                  String(activeGroupId) === String(group.id)
+                    ? 'active'
+                    : ''
                 }`}
                 onClick={() => setActiveGroupId(String(group.id))}
               >
@@ -224,26 +252,40 @@ export function TreeSelectField({
           </div>
 
           <div className="tree-select-items">
-            {activeGroup?.children?.map((child) => (
-              <button
-                key={child.id}
-                type="button"
-                className={`tree-select-item ${
-                  String(value) === String(child.id) ? 'selected' : ''
-                }`}
-                onClick={() => {
-                  onChange(String(child.id));
-                  setOpen(false);
-                }}
-              >
-                {child.name}
-              </button>
-            ))}
+            {activeGroup?.children?.map((child) => {
+              const isDisabled =
+                disabledIdSet.has(String(child.id));
+
+              return (
+                <button
+                  key={child.id}
+                  type="button"
+                  disabled={isDisabled}
+                  className={`tree-select-item ${
+                    String(value) === String(child.id)
+                      ? 'selected'
+                      : ''
+                  } ${isDisabled ? 'disabled' : ''}`}
+                  onClick={() => {
+                    if (isDisabled) return;
+
+                    onChange(String(child.id));
+                    setOpen(false);
+                  }}
+                >
+                  {child.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {error && <small className="field-error-text">{error}</small>}
+      {error && (
+        <small className="field-error-text">
+          {error}
+        </small>
+      )}
     </label>
   );
 }

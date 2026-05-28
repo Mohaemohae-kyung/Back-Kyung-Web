@@ -20,9 +20,12 @@ export default function ExpertRegister() {
     displayName: '',
     introduction: '',
     careerYears: '',
+    mainLocationId: '',
     mainCategoryId: '',
-    mainLocationId: ''
+    subCategoryIds: []
   });
+
+  const [subServiceDraft, setSubServiceDraft] = useState('');
 
   const [done, setDone] = useState(false);
 
@@ -33,8 +36,8 @@ export default function ExpertRegister() {
   const displayNameRef = useRef(null);
   const introductionRef = useRef(null);
   const careerYearsRef = useRef(null);
-  const mainCategoryRef = useRef(null);
   const mainLocationRef = useRef(null);
+  const mainCategoryRef = useRef(null);
 
   const clearError = (fieldName) => {
 
@@ -56,16 +59,16 @@ export default function ExpertRegister() {
       displayName: displayNameRef,
       introduction: introductionRef,
       careerYears: careerYearsRef,
-      mainCategoryId: mainCategoryRef,
-      mainLocationId: mainLocationRef
+      mainLocationId: mainLocationRef,
+      mainCategoryId: mainCategoryRef
     };
 
     const order = [
       'displayName',
       'introduction',
       'careerYears',
-      'mainCategoryId',
-      'mainLocationId'
+      'mainLocationId',
+      'mainCategoryId'
     ];
 
     const firstErrorField = order.find(
@@ -140,19 +143,104 @@ export default function ExpertRegister() {
         '경력은 0 이상이어야 합니다.';
     }
 
-    if (!form.mainCategoryId) {
-
-      nextErrors.mainCategoryId =
-        '서비스 분야를 선택해주세요.';
-    }
-
     if (!form.mainLocationId) {
 
       nextErrors.mainLocationId =
         '활동 지역을 선택해주세요.';
     }
 
+    if (!form.mainCategoryId) {
+
+      nextErrors.mainCategoryId =
+        '메인 서비스를 선택해주세요.';
+    }
+
     return nextErrors;
+  };
+
+  const getServiceLabel = (id) => {
+
+    for (const group of SERVICE_CATEGORY_GROUPS) {
+
+      const child = group.children?.find(
+        (item) => String(item.id) === String(id)
+      );
+
+      if (child) {
+        return `${group.name} > ${child.name}`;
+      }
+    }
+
+    return '';
+  };
+
+  const getServiceName = (id) => {
+
+    for (const group of SERVICE_CATEGORY_GROUPS) {
+
+      const child = group.children?.find(
+        (item) => String(item.id) === String(id)
+      );
+
+      if (child) {
+        return child.name;
+      }
+    }
+
+    return '서비스';
+  };
+
+  const addSubService = () => {
+
+    if (!subServiceDraft) {
+
+      setMsg('추가할 서비스를 선택해주세요.');
+      return;
+    }
+
+    if (
+      String(subServiceDraft) ===
+      String(form.mainCategoryId)
+    ) {
+
+      setMsg(
+        '메인 서비스는 추가 서비스로 중복 등록할 수 없습니다.'
+      );
+
+      return;
+    }
+
+    if (
+      form.subCategoryIds.some(
+        (id) => String(id) === String(subServiceDraft)
+      )
+    ) {
+
+      setMsg('이미 추가한 서비스입니다.');
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      subCategoryIds: [
+        ...prev.subCategoryIds,
+        subServiceDraft
+      ]
+    }));
+
+    setSubServiceDraft('');
+
+    setMsg('');
+  };
+
+  const removeSubService = (categoryId) => {
+
+    setForm((prev) => ({
+      ...prev,
+      subCategoryIds: prev.subCategoryIds.filter(
+        (id) => String(id) !== String(categoryId)
+      )
+    }));
   };
 
   const submit = async (e) => {
@@ -196,22 +284,27 @@ export default function ExpertRegister() {
         Number(form.mainLocationId)
     };
 
-    const servicePayload = {
+    const selectedServiceIds = [
+      form.mainCategoryId,
+      ...form.subCategoryIds
+    ].filter(Boolean);
 
-      categoryId:
-        Number(form.mainCategoryId),
+    const servicePayloads =
+      selectedServiceIds.map((categoryId) => ({
+        categoryId:
+          Number(categoryId),
 
-      locationId:
-        Number(form.mainLocationId),
+        locationId:
+          Number(form.mainLocationId),
 
-      serviceTitle:
-        form.displayName.trim(),
+        serviceTitle:
+          getServiceName(categoryId),
 
-      serviceDescription:
-        form.introduction.trim(),
+        serviceDescription:
+          form.introduction.trim(),
 
-      price: 0
-    };
+        price: 0
+      }));
 
     console.log(
       '프로필 요청 데이터',
@@ -220,7 +313,7 @@ export default function ExpertRegister() {
 
     console.log(
       '서비스 요청 데이터',
-      servicePayload
+      servicePayloads
     );
 
     try {
@@ -291,21 +384,26 @@ export default function ExpertRegister() {
 
       // =========================
       // 서비스 생성
+      // 메인 서비스 + 추가 서비스 전체 생성
       // =========================
 
       console.log(
         '서비스 생성 API 호출 시작'
       );
 
-      const serviceRes =
-        await api.post(
-          '/api/expert-services',
-          servicePayload
+      const serviceResList =
+        await Promise.all(
+          servicePayloads.map((payload) =>
+            api.post(
+              '/api/expert-services',
+              payload
+            )
+          )
         );
 
       console.log(
         '서비스 생성 성공',
-        serviceRes
+        serviceResList
       );
 
       setDone(true);
@@ -397,26 +495,7 @@ export default function ExpertRegister() {
           />
 
           <TreeSelectField
-            label="세부 서비스 분야"
-            value={form.mainCategoryId}
-            error={errors.mainCategoryId}
-            selectRef={mainCategoryRef}
-            onChange={(value) => {
-
-              setForm({
-                ...form,
-                mainCategoryId: value
-              });
-
-              clearError('mainCategoryId');
-
-            }}
-            groups={SERVICE_CATEGORY_GROUPS}
-            placeholder="세부 서비스 분야를 선택해주세요"
-          />
-
-          <TreeSelectField
-            label="세부 활동 지역"
+            label="활동 지역"
             value={form.mainLocationId}
             error={errors.mainLocationId}
             selectRef={mainLocationRef}
@@ -431,8 +510,100 @@ export default function ExpertRegister() {
 
             }}
             groups={LOCATION_GROUPS}
-            placeholder="세부 활동 지역을 선택해주세요"
+            placeholder="활동 지역을 선택해주세요"
           />
+
+          <TreeSelectField
+            label="메인 서비스"
+            value={form.mainCategoryId}
+            error={errors.mainCategoryId}
+            selectRef={mainCategoryRef}
+            onChange={(value) => {
+
+              setForm((prev) => ({
+                ...prev,
+                mainCategoryId: value,
+                subCategoryIds: prev.subCategoryIds.filter(
+                  (id) => String(id) !== String(value)
+                )
+              }));
+
+              clearError('mainCategoryId');
+
+            }}
+            groups={SERVICE_CATEGORY_GROUPS}
+            placeholder="메인 서비스를 선택해주세요"
+          />
+
+          <div className="service-extra-box">
+
+            <div className="service-extra-head">
+
+              <span>
+                추가 제공 서비스
+              </span>
+
+              <small>
+                메인 서비스 외에 함께 제공할 서비스를 추가해주세요.
+              </small>
+
+            </div>
+
+            <div className="service-add-row">
+
+              <TreeSelectField
+                label="추가할 서비스"
+                value={subServiceDraft}
+                onChange={setSubServiceDraft}
+                groups={SERVICE_CATEGORY_GROUPS}
+                placeholder="추가할 서비스를 선택해주세요"
+                disabledIds={[
+                  form.mainCategoryId,
+                  ...form.subCategoryIds
+                ].filter(Boolean)}
+              />
+
+              <button
+                type="button"
+                className="btn btn-ghost service-add-btn"
+                onClick={addSubService}
+              >
+                추가
+              </button>
+
+            </div>
+
+            {form.subCategoryIds.length > 0 && (
+
+              <div className="service-chip-list">
+
+                {form.subCategoryIds.map((categoryId) => (
+
+                  <div
+                    className="service-chip"
+                    key={categoryId}
+                  >
+
+                    <span>
+                      {getServiceLabel(categoryId)}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => removeSubService(categoryId)}
+                    >
+                      ×
+                    </button>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
+
+          </div>
 
           {msg && (
             <p className="error-text">

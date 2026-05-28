@@ -3817,3 +3817,174 @@ body {
 .header-user{
   gap:10px;
 }
+
+/* =========================
+   Expert Register - Extra Service
+========================= */
+
+.service-extra-box {
+  display: grid;
+  gap: 10px;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--line);
+  background: transparent;
+}
+
+.service-extra-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.service-extra-head span {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.service-extra-head small {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  text-align: right;
+}
+
+.service-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.service-add-row .field {
+  margin: 0;
+}
+
+.service-add-row .tree-field {
+  display: block;
+}
+
+.service-add-row .tree-field > span {
+  display: none;
+}
+
+.service-add-row .tree-select-trigger {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.service-add-btn {
+  width: 96px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 900;
+  align-self: stretch;
+}
+
+.service-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.service-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 8px 11px;
+  border: 1px solid rgba(111, 76, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(111, 76, 255, 0.07);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.service-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(111, 76, 255, 0.13);
+  color: var(--primary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.service-chip button:hover {
+  background: rgba(111, 76, 255, 0.22);
+}
+
+/* =========================
+   Tree Select Disabled State
+========================= */
+
+.tree-select-trigger.is-disabled,
+.tree-select-trigger:disabled {
+  background: #f3f6fb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.tree-select-trigger.is-disabled .tree-select-arrow,
+.tree-select-trigger:disabled .tree-select-arrow {
+  color: #9ca3af;
+}
+
+.tree-select-item.disabled,
+.tree-select-item:disabled {
+  color: #b8c0cf;
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.tree-select-item.disabled:hover,
+.tree-select-item:disabled:hover {
+  color: #b8c0cf;
+  background: #f8fafc;
+  font-weight: 400;
+}
+
+/* =========================
+   Mobile
+========================= */
+
+@media (max-width: 640px) {
+  .service-extra-head {
+    display: grid;
+    gap: 4px;
+  }
+
+  .service-extra-head small {
+    text-align: left;
+  }
+
+  .service-add-row {
+    grid-template-columns: 1fr;
+  }
+
+  .service-add-btn {
+    width: 100%;
+  }
+}
