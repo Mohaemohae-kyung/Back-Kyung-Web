@@ -58,6 +58,86 @@ function formatTime(value) {
   });
 }
 
+// =========================
+// 임시 쿠폰 데이터
+// 백엔드 쿠폰 API 연결 전까지 화면 테스트용으로 사용
+// =========================
+const MOCK_COUPONS = [
+  {
+    couponId: 1,
+    couponName: '웰컴 쿠폰',
+    discountType: 'FIXED',
+    discountValue: 5000,
+    description: '신규 가입자 5,000원 할인',
+    usable: true
+  },
+  {
+    couponId: 2,
+    couponName: '마켓 첫 결제 쿠폰',
+    discountType: 'RATE',
+    discountValue: 10,
+    maxDiscountAmount: 10000,
+    description: '10% 할인, 최대 10,000원',
+    usable: true
+  },
+  {
+    couponId: 3,
+    couponName: '만료된 테스트 쿠폰',
+    discountType: 'FIXED',
+    discountValue: 3000,
+    description: '사용 기간이 지난 쿠폰',
+    usable: false
+  }
+];
+
+// =========================
+// 쿠폰 할인 금액 계산
+// FIXED: 정액 할인
+// RATE: 비율 할인
+// =========================
+function calculateCouponDiscount(coupon, baseAmount) {
+  if (!coupon) return 0;
+
+  const safeBaseAmount = Number(baseAmount || 0);
+
+  if (safeBaseAmount <= 0) return 0;
+
+  if (coupon.discountType === 'RATE') {
+    const rateDiscount = Math.floor(
+      safeBaseAmount * Number(coupon.discountValue || 0) / 100
+    );
+
+    return Math.min(
+      rateDiscount,
+      Number(coupon.maxDiscountAmount || rateDiscount),
+      safeBaseAmount
+    );
+  }
+
+  return Math.min(
+    Number(coupon.discountValue || 0),
+    safeBaseAmount
+  );
+}
+
+// =========================
+// 쿠폰 선택 박스에 보여줄 할인 문구 생성
+// 예: 5,000원 할인 / 10% 할인, 최대 10,000원
+// =========================
+function getCouponBenefitText(coupon) {
+  if (!coupon) return '';
+
+  if (coupon.discountType === 'RATE') {
+    const maxText = coupon.maxDiscountAmount
+      ? `, 최대 ${formatPrice(coupon.maxDiscountAmount)}`
+      : '';
+
+    return `${coupon.discountValue}% 할인${maxText}`;
+  }
+
+  return `${formatPrice(coupon.discountValue)} 할인`;
+}
+
 export default function StoreProductCheckout() {
   const { storeProductId, bookingId } = useParams();
   const navigate = useNavigate();
@@ -69,7 +149,45 @@ export default function StoreProductCheckout() {
   const [agreeThirdParty, setAgreeThirdParty] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
 
+  // 쿠폰 목록
+  const [coupons, setCoupons] = useState([]);
+  // 사용자가 선택한 쿠폰 ID
+  const [selectedCouponId, setSelectedCouponId] = useState('');
+  // 결제 전 최종 금액 확인 모달 표시 여부
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const canPay = agreePrivacy && agreeThirdParty;
+
+  // =========================
+  // 결제 금액 계산
+  // 화면 표시용 계산이며, 실제 검증은 나중에 백엔드에서 다시 해야 함
+  // =========================
+
+  // 서비스 원래 금액
+  const baseAmount = Number(checkout?.baseAmount || 0);
+
+  // 기존 할인 금액
+  const originalDiscountAmount = Number(checkout?.discountAmount || 0);
+
+  // 선택된 쿠폰 찾기
+  const selectedCoupon = coupons.find(
+    (coupon) => String(coupon.couponId) === String(selectedCouponId)
+  );
+
+  // 쿠폰 할인 금액
+  const couponDiscountAmount = calculateCouponDiscount(
+    selectedCoupon,
+    baseAmount
+  );
+
+  // 전체 할인 금액
+  const totalDiscountAmount = Math.min(
+    originalDiscountAmount + couponDiscountAmount,
+    baseAmount
+  );
+
+  // 최종 결제 금액
+  const finalAmount = Math.max(baseAmount - totalDiscountAmount, 0);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -78,6 +196,15 @@ export default function StoreProductCheckout() {
       try {
         const res = await api.get(`/api/checkout/bookings/${bookingId}`);
         setCheckout(res.result);
+
+        // 쿠폰 API 연결 전까지 임시 쿠폰 목록 사용
+        setCoupons(MOCK_COUPONS);
+
+        // 백엔드 연결 후 교체 예정
+        // const couponRes = await api.get(
+        //   `/api/coupons/usable?targetType=BOOKING&targetId=${bookingId}`
+        // );
+        // setCoupons(couponRes.result);
       } catch (err) {
         setMsg(err.message || '결제 정보를 불러오지 못했습니다.');
       }
@@ -86,7 +213,22 @@ export default function StoreProductCheckout() {
     loadCheckout();
   }, [bookingId]);
 
-  const handlePayment = async () => {
+  // 결제하기 버튼 클릭 시 Toss를 바로 띄우지 않고 확인 모달만 연다.
+  const handlePaymentClick = () => {
+    if (!canPay) {
+      alert('필수 약관에 동의해주세요.');
+      return;
+    }
+
+    if (finalAmount <= 0) {
+      alert('결제 금액을 확인할 수 없습니다.');
+      return;
+    }
+
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmPayment = async () => {
     if (!canPay) {
       alert('필수 약관에 동의해주세요.');
       return;
@@ -101,30 +243,31 @@ export default function StoreProductCheckout() {
         targetType: 'BOOKING',
         targetId: Number(bookingId),
         paymentMethod,
-        pgProvider: 'TEST_PG'
+        pgProvider: 'TEST_PG',
+        couponId: selectedCoupon ? selectedCoupon.couponId : null
       });
 
       const orderId = prepareRes.result?.orderId;
-      const finalAmount = Number(
-        prepareRes.result?.finalAmount ??
-        checkout.finalAmount ??
-        0
-      );
+
+      // 현재는 프론트에서 계산한 쿠폰 적용 금액을 사용
+      const paymentAmount = Number(finalAmount);
 
       if (!orderId) {
         alert('주문번호를 확인할 수 없습니다.');
         return;
       }
 
-      if (!finalAmount) {
+      if (paymentAmount <= 0) {
         alert('결제 금액을 확인할 수 없습니다.');
         return;
       }
 
+      setShowConfirmModal(false);
+
       // Toss Payments 연동
       const tossPayments = window.TossPayments('test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E');
       tossPayments.requestPayment('카드', {
-        amount: finalAmount,
+        amount: paymentAmount,
         orderId: orderId,
         orderName: checkout.productTitle || '예약 결제',
         customerName: '고객명',
@@ -251,24 +394,74 @@ export default function StoreProductCheckout() {
         </section>
 
         <section className="checkout-section">
+          <div className="checkout-section-title-row">
+            <h2>쿠폰 할인</h2>
+            <small>사용 가능한 쿠폰을 선택해주세요.</small>
+          </div>
+
+          <div className="checkout-coupon-box">
+            {/* 쿠폰 선택 */}
+            <select
+              className="checkout-coupon-select"
+              value={selectedCouponId}
+              onChange={(e) => setSelectedCouponId(e.target.value)}
+            >
+              <option value="">쿠폰 선택 안 함</option>
+
+              {coupons.map((coupon) => (
+                <option
+                  key={coupon.couponId}
+                  value={coupon.couponId}
+                  disabled={!coupon.usable}
+                >
+                  {coupon.couponName} - {getCouponBenefitText(coupon)}
+                  {!coupon.usable ? ' (사용 불가)' : ''}
+                </option>
+              ))}
+            </select>
+
+            {/* 선택한 쿠폰 정보 */}
+            {selectedCoupon ? (
+              <div className="checkout-selected-coupon">
+                <div>
+                  <strong>{selectedCoupon.couponName}</strong>
+                  <p>{selectedCoupon.description}</p>
+                </div>
+
+                <b>-{formatPrice(couponDiscountAmount)}</b>
+              </div>
+            ) : (
+              <p className="checkout-coupon-empty">
+                적용된 쿠폰이 없습니다.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section className="checkout-section">
           <h2>결제금액</h2>
 
           <div className="checkout-price-box">
             <div className="checkout-price-row">
               <span>서비스 금액</span>
-              <strong>{formatPrice(checkout.baseAmount)}</strong>
+              <strong>{formatPrice(baseAmount)}</strong>
             </div>
 
             <div className="checkout-price-row">
-              <span>할인 금액</span>
-              <strong>{formatPrice(checkout.discountAmount)}</strong>
+              <span>기본 할인 금액</span>
+              <strong>-{formatPrice(originalDiscountAmount)}</strong>
+            </div>
+
+            <div className="checkout-price-row discount">
+              <span>쿠폰 할인 금액</span>
+              <strong>-{formatPrice(couponDiscountAmount)}</strong>
             </div>
 
             <div className="checkout-price-divider" />
 
             <div className="checkout-price-row total">
               <span>최종 결제 금액</span>
-              <strong>{formatPrice(checkout.finalAmount)}</strong>
+              <strong>{formatPrice(finalAmount)}</strong>
             </div>
           </div>
 
@@ -319,7 +512,7 @@ export default function StoreProductCheckout() {
           type="button"
           className="checkout-pay-button"
           disabled={!canPay || isPaying}
-          onClick={handlePayment}
+          onClick={handlePaymentClick}
         >
           {isPaying ? '결제 처리 중...' : '결제하기'}
         </button>
@@ -332,6 +525,76 @@ export default function StoreProductCheckout() {
           상품 상세로 돌아가기
         </button>
       </div>
+
+      {showConfirmModal && (
+        <div className="checkout-confirm-overlay">
+          <div className="checkout-confirm-modal">
+            {/* 모달 닫기 */}
+            <button
+              type="button"
+              className="checkout-confirm-close"
+              onClick={() => setShowConfirmModal(false)}
+            >
+              ×
+            </button>
+
+            <h2>최종 결제 금액 확인</h2>
+
+            <p className="checkout-confirm-desc">
+              결제창으로 이동하기 전에 상품과 결제 금액을 확인해주세요.
+            </p>
+
+            {/* 결제 상품명 */}
+            <div className="checkout-confirm-product">
+              <span>상품명</span>
+              <strong>{checkout.productTitle || '-'}</strong>
+            </div>
+
+            {/* 결제 금액 요약 */}
+            <div className="checkout-confirm-summary">
+              <div>
+                <span>서비스 금액</span>
+                <strong>{formatPrice(baseAmount)}</strong>
+              </div>
+
+              <div>
+                <span>선택 쿠폰</span>
+                <strong>{selectedCoupon?.couponName || '선택 안 함'}</strong>
+              </div>
+
+              <div>
+                <span>총 할인 금액</span>
+                <strong>-{formatPrice(totalDiscountAmount)}</strong>
+              </div>
+
+              <div className="checkout-confirm-total">
+                <span>최종 결제 금액</span>
+                <strong>{formatPrice(finalAmount)}</strong>
+              </div>
+            </div>
+
+            {/* 모달 하단 버튼 */}
+            <div className="checkout-confirm-actions">
+              <button
+                type="button"
+                className="checkout-confirm-cancel"
+                onClick={() => setShowConfirmModal(false)}
+              >
+                취소
+              </button>
+
+              <button
+                type="button"
+                className="checkout-confirm-pay"
+                disabled={isPaying}
+                onClick={handleConfirmPayment}
+              >
+                {isPaying ? '결제 준비 중...' : `${formatPrice(finalAmount)} 결제하기`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
