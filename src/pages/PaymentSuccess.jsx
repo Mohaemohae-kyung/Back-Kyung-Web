@@ -42,7 +42,7 @@ export default function PaymentSuccess() {
         console.log('2. Confirm E2E 암호문 전송:', encryptedDto);
 
         console.log('2. E2E Confirm 암호화 완료, 서버(프록시)로 전송:', encryptedDto);
-        const confirmRes = await api.post('/api/payments/confirm-e2e', encryptedDto);
+        const confirmRes = await api.post('/api/payments/confirm', encryptedDto);
 
         const cipherTextFromDb = confirmRes?.result?.cipherText || confirmRes?.data?.cipherText || confirmRes?.cipherText;
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { api } from '../api/client';
+import e2eCrypto from '../utils/e2eCrypto';
 
 function formatPrice(value) {
   return `${Number(value || 0).toLocaleString()}원`;
@@ -71,8 +72,19 @@ export default function StoreProductCheckout() {
 
   const canPay = agreePrivacy && agreeThirdParty;
 
+  const [rsaPublicKey, setRsaPublicKey] = useState(null);
+
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    const fetchPublicKey = async () => {
+      try {
+        const res = await api.get('/api/payments/public-key');
+        setRsaPublicKey(res?.publicKey || res?.data?.publicKey || res);
+      } catch (error) {
+        console.error('공개키 로딩 실패:', error);
+      }
+    };
 
     const loadCheckout = async () => {
       try {
@@ -83,6 +95,7 @@ export default function StoreProductCheckout() {
       }
     };
 
+    fetchPublicKey();
     loadCheckout();
   }, [bookingId]);
 
@@ -97,19 +110,35 @@ export default function StoreProductCheckout() {
     try {
       setIsPaying(true);
 
-      const prepareRes = await api.post('/api/payments/prepare', {
+      if (!rsaPublicKey) {
+        alert('보안 연결(키 교환)이 완료되지 않았습니다.');
+        setIsPaying(false);
+        return;
+      }
+
+      // E2E 평문 페이로드
+      const payloadData = {
         targetType: 'BOOKING',
         targetId: Number(bookingId),
         paymentMethod,
-        pgProvider: 'TEST_PG'
-      });
+        pgProvider: 'TEST_PG',
+        welcomeDiscountAmount: 0 // 디버거로 조작해 볼 변수
+      };
 
-      const orderId = prepareRes.result?.orderId;
-      const finalAmount = Number(
-        prepareRes.result?.finalAmount ??
-        checkout.finalAmount ??
-        0
-      );
+      const encryptedDto = e2eCrypto.encryptPayload(payloadData, rsaPublicKey);
+
+      const prepareRes = await api.post('/api/payments/prepare', encryptedDto);
+      const cipherTextFromDb = prepareRes?.result?.cipherText || prepareRes?.data?.cipherText || prepareRes?.cipherText;
+
+      if (!cipherTextFromDb) {
+        throw new Error('서버로부터 암호화된 응답을 받지 못했습니다.');
+      }
+
+      const decryptedRes = e2eCrypto.decryptResponse(cipherTextFromDb);
+      console.log('해독된 준비 응답:', decryptedRes);
+
+      const orderId = decryptedRes?.orderId || decryptedRes?.transaction?.orderId;
+      const finalAmount = Number(decryptedRes?.finalAmount || checkout.finalAmount || 0);
 
       if (!orderId) {
         alert('주문번호를 확인할 수 없습니다.');

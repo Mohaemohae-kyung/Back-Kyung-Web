@@ -79,7 +79,7 @@ export default function PaymentPage() {
       console.log('2. E2E 암호화 완료, 서버(프록시)로 전송:', encryptedDto);
 
       // 2) 서버에 결제 준비(Prepare) 요청
-      const prepareRes = await api.post('/api/payments/prepare-e2e', encryptedDto);
+      const prepareRes = await api.post('/api/payments/prepare', encryptedDto);
       const cipherTextFromDb = prepareRes?.result?.cipherText || prepareRes?.data?.cipherText || prepareRes?.cipherText;
 
       if (!cipherTextFromDb) {
