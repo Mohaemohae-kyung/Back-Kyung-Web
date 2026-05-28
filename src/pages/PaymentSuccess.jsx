@@ -22,21 +22,16 @@ export default function PaymentSuccess() {
 
       try {
         // 메인 백엔드(Spring Boot)로 최종 승인 요청 전송
-        const response = await api.post('/api/payments/confirm', { 
+        await api.post('/api/payments/confirm', { 
           paymentKey, 
           orderId, 
           amount 
         });
 
-        // api.js가 응답 데이터를 파싱해서 반환해준다고 가정 (보통 response.data 또는 response.result)
-        const data = response?.result || response?.data || response;
-
-        if (data.isSuccess || data.success || response.success) {
-          alert('결제가 성공적으로 완료되었습니다.');
-          navigate('/mypage'); // 마이페이지나 결제 완료 페이지로 이동
-        } else {
-          setErrorMsg(data.message || data.error || '결제 승인 중 오류가 발생했습니다.');
-        }
+        // api.js(client.js) 내부에서 에러(isSuccess=false) 발생 시 자동으로 catch 블록으로 넘어가므로
+        // 여기까지 코드가 도달했다면 결제가 성공한 것입니다.
+        alert('결제가 성공적으로 완료되었습니다.');
+        navigate('/mypage'); // 마이페이지나 결제 완료 페이지로 이동
       } catch (err) {
         console.error(err);
         setErrorMsg(err.response?.data?.message || '메인 서버와 통신할 수 없습니다.');
