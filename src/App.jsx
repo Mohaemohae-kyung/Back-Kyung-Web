@@ -31,12 +31,12 @@ import MyPage from './pages/MyPage';
 import ExpertRegister from './pages/ExpertRegister';
 import RequestDetail from './pages/RequestDetail';
 import { ChatSocketProvider } from './components/ChatSocketContext';
-import PaymentDetail from './pages/PaymentDetail';
 import PaymentPage from './pages/PaymentPage';
 import StoreProductCheckout from './pages/StoreProductCheckout';
 import MockPgPayment from './pages/MockPgPayment';
 import BookingDetail from './pages/BookingDetail';
 import AIChatbot from './components/AIChatbot';
+import PaymentSuccess from './pages/PaymentSuccess';
 
 export default function App() {
 
@@ -188,12 +188,10 @@ export default function App() {
               element={<ExpertRegister />}
             />
 
-            <Route
-              path="/payments/:paymentId"
-              element={<PaymentDetail />}
-            />
-
+            {/* 결제 화면 */}
             <Route path="/payments/:paymentId" element={<PaymentPage />} />
+
+            <Route path="/payment/success" element={<PaymentSuccess />} />
 
           </Routes>
 

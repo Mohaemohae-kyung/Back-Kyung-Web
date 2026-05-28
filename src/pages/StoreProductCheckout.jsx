@@ -121,13 +121,20 @@ export default function StoreProductCheckout() {
         return;
       }
 
-      navigate('/mock-pg', {
-        state: {
-          orderId,
-          amount: finalAmount,
-          paymentMethod,
-          bookingId: Number(bookingId),
-          storeProductId: Number(storeProductId)
+      // Toss Payments 연동
+      const tossPayments = window.TossPayments('test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E');
+      tossPayments.requestPayment('카드', {
+        amount: finalAmount,
+        orderId: orderId,
+        orderName: checkout.productTitle || '예약 결제',
+        customerName: '고객명',
+        successUrl: window.location.origin + '/payment/success',
+        failUrl: window.location.origin + '/payment/fail',
+      }).catch(function (error) {
+        if (error.code === 'USER_CANCEL') {
+          alert('결제를 취소하셨습니다.');
+        } else {
+          alert(error.message);
         }
       });
     } catch (err) {

@@ -28,6 +28,7 @@ export default function ExpertDetail() {
   const [expert, setExpert] = useState(null);
 
   const [form, setForm] = useState({
+    categoryId: '',
     title: '',
     content: '',
     budget: '',
@@ -85,10 +86,22 @@ export default function ExpertDetail() {
               .replace(/[^0-9]/g, '')
           );
 
+      if (!form.categoryId) {
+
+        setMsg('서비스를 선택해주세요.');
+
+        return;
+      }
+
       await api.post('/api/service-requests', {
 
-        expertServiceId:
-          expert.expertServiceId || Number(serviceId),
+        expertProfileId:
+          expert.expertProfileId,
+
+        categoryId:
+          form.categoryId
+            ? Number(form.categoryId)
+            : null,
 
         title: form.title,
 
@@ -131,7 +144,9 @@ export default function ExpertDetail() {
   // 본인 게시물 여부
   // =========================
   const isMine =
-    loginUser?.userId === expert.ownerUserId;
+    loginUser?.userId &&
+    expert.ownerUserId &&
+    String(loginUser.userId) === String(expert.ownerUserId);
 
   return (
 
@@ -144,97 +159,129 @@ export default function ExpertDetail() {
 
       <div className="detail-layout">
 
-        <div className="panel profile-panel">
+        <div className="panel profile-panel new-profile">
 
-          <div className="profile-top">
+          {/* 상단 */}
+          <div className="new-profile-top">
 
             <div className="avatar large">
-              {(expert.displayName || '고').slice(0, 1)}
+
+              {expert.profileImageUrl ? (
+
+                <img
+                  src={expert.profileImageUrl}
+                  alt="프로필"
+                  className="profile-image"
+                />
+
+              ) : (
+
+                <span>
+                  {(expert.displayName || '고')
+                    .slice(0, 1)}
+                </span>
+
+              )}
+
             </div>
 
-            <div>
+            <div className="top-info">
+
               <span className="badge">
                 검증된 고수
               </span>
 
-              <h2>
-                {expert.serviceTitle || expert.displayName || '활동 고수'}
-              </h2>
+              <div className="name-row">
+
+                <h2>
+                  {expert.displayName || '활동 고수'}
+                </h2>
+
+                <p className="profile-meta">
+                  경력 : {expert.careerYears || 0}년
+                  {' '}
+                  평점 : {expert.rating || '0.0'}
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <div className="new-profile-body">
+
+            {/* 소개 */}
+            <div className="intro-box">
+
+              <h3>고수 소개</h3>
 
               <p>
                 {
-                  expert.serviceDescription ||
                   expert.introduction ||
-                  '소개글을 준비 중입니다.'
+                  expert.serviceDescription ||
+                  '소개글이 없습니다.'
                 }
               </p>
 
             </div>
 
-          </div>
+            <div className="bottom-detail-row">
 
-          <div className="profile-stats">
+              {/* 서비스 목록 */}
+              <div className="service-box">
 
-            <div>
-              <b>{expert.rating || '0.0'}</b>
-              <span>평점</span>
+                <div className="info-card">
+
+                  <span>
+                    <BriefcaseBusiness size={20} />
+                  </span>
+
+                  <small>서비스 분야</small>
+
+                  <b>
+                    {
+                      expert.categoryNames?.length > 0
+                        ? expert.categoryNames.join(', ')
+                        : '서비스 협의'
+                    }
+                  </b>
+
+                </div>
+
+              </div>
+
+              <div className="side-info-column">
+
+                <div className="info-card">
+
+                  <span>
+                    <ShieldCheck size={20} />
+                  </span>
+
+                  <small>진행 방식</small>
+
+                  <b>채팅 상담 후 일정 확정</b>
+
+                </div>
+
+                <div className="info-card">
+
+                  <span>
+                    <MapPin size={20} />
+                  </span>
+
+                  <small>활동 지역</small>
+
+                  <b>
+                    {expert.mainLocationName || '지역 협의'}
+                  </b>
+
+                </div>
+
+              </div>
+
             </div>
-
-            <div>
-              <b>{expert.reviewCount || 0}</b>
-              <span>후기</span>
-            </div>
-
-            <div>
-              <b>{expert.careerYears || 0}년</b>
-              <span>경력</span>
-            </div>
-
-          </div>
-
-          <div className="info-grid">
-
-            <Info
-              icon={<BriefcaseBusiness />}
-              label="서비스 분야"
-              value={expert.mainCategoryName || '서비스 협의'}
-            />
-
-            <Info
-              icon={<MapPin />}
-              label="활동 지역"
-              value={expert.mainLocationName || '지역 협의'}
-            />
-
-            <Info
-              icon={<ShieldCheck />}
-              label="진행 방식"
-              value="채팅 상담 후 일정 확정"
-            />
-
-            <Info
-              icon={<CreditCard />}
-              label="예상 금액"
-              value={
-                expert.price && expert.price > 0
-                  ? `${expert.price.toLocaleString()}원`
-                  : '견적 협의'
-              }
-            />
-
-          </div>
-
-          <div className="profile-section">
-
-            <h3>서비스 소개</h3>
-
-            <p>
-              {
-                expert.serviceDescription ||
-                expert.introduction ||
-                '서비스 소개가 아직 등록되지 않았습니다.'
-              }
-            </p>
 
           </div>
 
@@ -245,7 +292,35 @@ export default function ExpertDetail() {
         </div>
 
         {
-          !isMine && (
+          isMine ? (
+
+            <aside className="panel quote-panel">
+
+              <div className="quote-head">
+
+                <div>
+
+                  <h3>내 고수 프로필</h3>
+
+                  <p>
+                    내가 등록한 고수 프로필입니다.
+                    프로필 정보와 제공 서비스를 수정할 수 있어요.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <Link
+                className="btn btn-primary full"
+                to="/expert/register?mode=edit"
+              >
+                고수 프로필 수정
+              </Link>
+
+            </aside>
+
+          ) : (
 
             <aside className="panel quote-panel">
 
@@ -304,6 +379,43 @@ export default function ExpertDetail() {
                       className="form"
                       onSubmit={submit}
                     >
+
+                      <div className="field">
+
+                        <label className="field-label">
+                          서비스 선택
+                        </label>
+
+                        <select
+                          className="service-select"
+                          value={form.categoryId || ''}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              categoryId:
+                                e.target.value
+                            })
+                          }
+                        >
+
+                          <option value="">
+                            서비스 선택
+                          </option>
+
+                          {expert.categoryNames?.map((name, idx) => (
+
+                            <option
+                              key={expert.expertServiceIds?.[idx]}
+                              value={expert.categoryIds?.[idx]}
+                            >
+                              {name}
+                            </option>
+
+                          ))}
+
+                        </select>
+
+                      </div>
 
                       <Input
                         label="요청 제목"
