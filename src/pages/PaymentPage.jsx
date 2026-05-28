@@ -51,39 +51,36 @@ export default function PaymentPage() {
   }
 
   async function handleConfirmPayment() {
-
     try {
+      // Toss Payments 객체 초기화 (발급받은 테스트 클라이언트 키)
+      const tossPayments = window.TossPayments('test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E');
+      
+      const orderId = payment?.orderId;
+      const amount = payment?.amount;
+      
+      if (!orderId || !amount) {
+        alert('결제 정보가 유효하지 않습니다.');
+        return;
+      }
 
-      const paymentKey =
-        `MOCK-${Date.now()}`;
-
-      const orderId =
-        payment?.orderId;
-
-      const amount =
-        payment?.amount;
-
-      await api.post(
-        '/api/payments/confirm',
-        {
-          paymentKey,
-          orderId,
-          amount
+      // 토스 결제창 띄우기
+      tossPayments.requestPayment('카드', {
+        amount: amount,
+        orderId: orderId,
+        orderName: '결제 서비스', // 실제로는 payment?.orderName 등 활용 가능
+        customerName: '고객명', // 실제 유저 이름이 있다면 연동
+        successUrl: window.location.origin + '/payment/success',
+        failUrl: window.location.origin + '/payment/fail',
+      }).catch(function (error) {
+        if (error.code === 'USER_CANCEL') {
+          alert('결제를 취소하셨습니다.');
+        } else {
+          alert(error.message);
         }
-      );
-
-      alert('결제가 완료되었습니다.');
-
-      navigate('/chat');
-
+      });
     } catch (err) {
-
       console.error(err);
-
-      alert(
-        err?.message ||
-        '결제에 실패했습니다.'
-      );
+      alert(err?.message || '결제창을 띄우는 데 실패했습니다.');
     }
   }
 

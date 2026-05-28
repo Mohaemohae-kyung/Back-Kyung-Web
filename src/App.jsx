@@ -37,6 +37,7 @@ import StoreProductCheckout from './pages/StoreProductCheckout';
 import MockPgPayment from './pages/MockPgPayment';
 import BookingDetail from './pages/BookingDetail';
 import AIChatbot from './components/AIChatbot';
+import PaymentSuccess from './pages/PaymentSuccess';
 
 export default function App() {
 
@@ -194,6 +195,8 @@ export default function App() {
             />
 
             <Route path="/payments/:paymentId" element={<PaymentPage />} />
+
+            <Route path="/payment/success" element={<PaymentSuccess />} />
 
           </Routes>
 
