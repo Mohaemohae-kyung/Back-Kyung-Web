@@ -88,7 +88,8 @@ export default function ExpertDetail() {
       await api.post('/api/service-requests', {
 
         expertServiceId:
-          expert.expertServiceId || Number(serviceId),
+          expert.expertServiceIds?.[0] ||
+          expert.expertServiceId,
 
         title: form.title,
 
@@ -130,8 +131,12 @@ export default function ExpertDetail() {
   // =========================
   // 본인 게시물 여부
   // =========================
+
+  // 본인이 등록한 고수 프로필인지 확인
   const isMine =
-    loginUser?.userId === expert.ownerUserId;
+    loginUser?.userId &&
+    expert.ownerUserId &&
+    String(loginUser.userId) === String(expert.ownerUserId);
 
   return (
 
@@ -262,7 +267,35 @@ export default function ExpertDetail() {
         </div>
 
         {
-          !isMine && (
+          isMine ? (
+
+            <aside className="panel quote-panel">
+
+              <div className="quote-head">
+
+                <div>
+
+                  <h3>내 고수 프로필</h3>
+
+                  <p>
+                    내가 등록한 고수 프로필입니다.
+                    프로필 정보와 제공 서비스를 수정할 수 있어요.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <Link
+                className="btn btn-primary full"
+                to="/expert/register?mode=edit"
+              >
+                고수 프로필 수정
+              </Link>
+
+            </aside>
+
+          ) : (
 
             <aside className="panel quote-panel">
 

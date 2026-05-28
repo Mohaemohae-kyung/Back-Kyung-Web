@@ -193,10 +193,31 @@ export default function MyPage() {
 
         <section className="panel expert-banner">
           <div>
-            <h2>고수로 활동하고 싶나요?</h2>
-            <p>전문가 프로필을 등록하면 고객에게 견적 요청을 받을 수 있습니다.</p>
+            <h2>
+              {userInfo.expertProfileId
+                ? '고수 프로필을 수정할까요?'
+                : '고수로 활동하고 싶나요?'}
+            </h2>
+
+            <p>
+              {userInfo.expertProfileId
+                ? '등록한 고수 프로필과 제공 서비스를 수정할 수 있습니다.'
+                : '전문가 프로필을 등록하면 고객에게 견적 요청을 받을 수 있습니다.'}
+            </p>
           </div>
-          <Link className="btn btn-primary" to="/expert/register">고수 활동 시작하기</Link>
+
+          <Link
+            className="btn btn-primary"
+            to={
+              userInfo.expertProfileId
+                ? '/expert/register?mode=edit'
+                : '/expert/register'
+            }
+          >
+            {userInfo.expertProfileId
+              ? '고수 프로필 수정'
+              : '고수 활동 시작하기'}
+          </Link>
         </section>
 
         <section className="panel">
