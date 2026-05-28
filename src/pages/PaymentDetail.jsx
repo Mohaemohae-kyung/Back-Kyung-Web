@@ -53,81 +53,75 @@ export default function PaymentDetail() {
 
   const handlePayment = async () => {
 
-    try {
+  try {
 
-      setLoading(true);
+    setLoading(true);
 
-      // Mock PG 승인 payload
-      const approvePayload = {
-        orderId: payment.orderId,
-        amount: payment.paymentAmount,
-        paymentMethod: selectedMethod
-      };
-
-      console.log('approve payload');
-      console.log(approvePayload);
-
-      // 1. Mock PG 승인
-      const approveRes = await api.post(
-        '/api/mock-pg/approve',
-        approvePayload
+    const tossPayments =
+      window.TossPayments(
+        'test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E'
       );
 
-      console.log('approve response');
-      console.log(approveRes);
+    const amount =
+      payment?.paymentAmount ||
+      payment?.amount;
 
-      // paymentKey 추출
-      const paymentKey =
-        approveRes?.result?.paymentKey ||
-        approveRes?.paymentKey;
+    if (!payment?.orderId || !amount) {
 
-      // 실제 승인 payload
-      const confirmPayload = {
-        orderId: payment.orderId,
-        paymentKey,
-        amount: payment.paymentAmount
-      };
-
-      console.log('confirm payload');
-      console.log(confirmPayload);
-
-      // 2. 실제 승인 확정
-      await api.post(
-        '/api/payments/confirm',
-        confirmPayload
-      );
-
-      alert('결제 완료');
-
-      if (roomId) {
-
-        navigate(
-          `/chat/${roomId}`,
-          {
-            state:{
-              paymentCompleted:true
-            }
-          }
-        );
-
-      }
-
-    } catch (err) {
-
-      console.error(err);
-
-      alert(
-        err?.response?.data?.message ||
-        err?.message ||
-        '결제 실패'
-      );
-
-    } finally {
-
-      setLoading(false);
+      alert('결제 정보가 올바르지 않습니다.');
+      return;
 
     }
-  };
+
+    await tossPayments.requestPayment(
+      '카드',
+      {
+        amount,
+
+        orderId: payment.orderId,
+
+        orderName:
+          payment.orderName ||
+          '서비스 결제',
+
+        customerName:
+          '고객',
+
+        successUrl:
+          window.location.origin +
+          '/payment/success',
+
+        failUrl:
+          window.location.origin +
+          '/payment/fail',
+      }
+    );
+
+  } catch (err) {
+
+    console.error(err);
+
+    if (
+      err?.code === 'USER_CANCEL'
+    ) {
+
+      alert('결제를 취소했습니다.');
+
+    } else {
+
+      alert(
+        err?.message ||
+        '결제창 실행 실패'
+      );
+
+    }
+
+  } finally {
+
+    setLoading(false);
+
+  }
+};
 
   return (
 

@@ -118,10 +118,8 @@ export default function Experts() {
       const searchText = [
 
         expert.displayName,
-        expert.serviceTitle,
-        expert.serviceDescription,
         expert.introduction,
-        expert.mainCategoryName,
+        expert.categoryNames?.join(' '),
         expert.mainLocationName
 
       ]
@@ -155,12 +153,13 @@ export default function Experts() {
 
         matchesCategory =
 
-          childNames.includes(
-            expert.mainCategoryName
-          ) ||
+          expert.categoryNames?.some(
+            categoryName =>
 
-          expert.mainCategoryName ===
-            selectedCategory?.name;
+              childNames.includes(categoryName) ||
+
+              categoryName === selectedCategory?.name
+          );
       }
 
       /* =========================
@@ -344,8 +343,8 @@ export default function Experts() {
 
             <Link
               className="expert-card card"
-              to={`/experts/${expert.expertServiceId}`}
-              key={expert.expertServiceId || i}
+              to={`/experts/${expert.expertProfileId}`}
+              key={expert.expertProfileId || i}
             >
 
               <div className="card-row">
@@ -389,7 +388,6 @@ export default function Experts() {
 
               <h3>
                 {
-                  expert.serviceTitle ||
                   expert.displayName ||
                   '활동 고수'
                 }
@@ -398,10 +396,7 @@ export default function Experts() {
               <p>
                 {
                   (
-                    expert.serviceDescription ||
-
                     expert.introduction ||
-
                     '소개글을 준비 중입니다.'
                   ).slice(0, 60)
                 }
@@ -443,7 +438,7 @@ export default function Experts() {
               <div className="service-category">
 
                 {
-                  expert.mainCategoryName ||
+                  expert.categoryNames?.join(', ') ||
                   '카테고리 미지정'
                 }
 

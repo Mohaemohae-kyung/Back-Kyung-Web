@@ -47,7 +47,7 @@ export default function Requests() {
 
         ? '/api/service-requests/received'
 
-        : '/api/service-requests/me';
+        : '/api/service-requests/sent';
 
     console.log('현재 사용자 ROLE = ', user?.role);
     console.log('호출 API = ', endpoint);
