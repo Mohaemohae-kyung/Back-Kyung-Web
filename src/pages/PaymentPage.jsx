@@ -18,6 +18,9 @@ export default function PaymentPage() {
   const [selectedMethod, setSelectedMethod] = useState('CARD');
   const [welcomeDiscountAmount, setWelcomeDiscountAmount] = useState(0);
 
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmData, setConfirmData] = useState(null);
+
   // E2E 암호화를 위한 서버 RSA 공개키
   const [rsaPublicKey, setRsaPublicKey] = useState(null);
 
@@ -107,34 +110,14 @@ export default function PaymentPage() {
         throw new Error('결제 서버 응답 데이터가 유효하지 않습니다.');
       }
 
-      // 4) 토스 결제창 띄우기 (간편결제 등 토스 옵션 호환 처리)
-      const tossPayments = window.TossPayments('test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E');
-      
-      let tossMethod = '카드';
-      let tossOptions = {
-        amount: Number(finalAmount), // E2E 서버에서 해독해서 가져온 최종 금액
-        orderId: orderId,
-        orderName: payment.orderName || '결제 서비스',
-        customerName: '고객명',
-        successUrl: window.location.origin + `/payment/success?roomId=${roomId || ''}`,
-        failUrl: window.location.origin + '/payment/fail',
-      };
-
-      if (selectedMethod === 'KAKAO') {
-         tossOptions.flowMode = 'DIRECT';
-         tossOptions.easyPay = '카카오페이';
-      } else if (selectedMethod === 'NAVER') {
-         tossOptions.flowMode = 'DIRECT';
-         tossOptions.easyPay = '네이버페이';
-      }
-
-      tossPayments.requestPayment(tossMethod, tossOptions).catch(function (error) {
-        if (error.code === 'USER_CANCEL') {
-          alert('결제를 취소하셨습니다.');
-        } else {
-          alert(error.message);
-        }
+      // 서버가 E2E 통신 후 내려준 "진짜" 결제 데이터를 모달에 세팅
+      setConfirmData({
+        orderId,
+        finalAmount: Number(finalAmount),
+        orderName: payment.orderName || '결제 서비스'
       });
+      setShowConfirmModal(true);
+
     } catch (err) {
       console.error('결제 에러:', err);
       alert(err?.message || '결제 진행 중 오류가 발생했습니다.');
@@ -142,6 +125,41 @@ export default function PaymentPage() {
       setLoading(false);
     }
   }
+
+  const handleTossPayment = () => {
+    if (!confirmData) return;
+    
+    // 4) 토스 결제창 띄우기 (간편결제 등 토스 옵션 호환 처리)
+    const tossPayments = window.TossPayments('test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E');
+    
+    let tossMethod = '카드';
+    let tossOptions = {
+      amount: confirmData.finalAmount, // E2E 서버에서 해독해서 가져온 최종 금액
+      orderId: confirmData.orderId,
+      orderName: confirmData.orderName,
+      customerName: '고객명',
+      successUrl: window.location.origin + `/payment/success?roomId=${roomId || ''}`,
+      failUrl: window.location.origin + '/payment/fail',
+    };
+
+    if (selectedMethod === 'KAKAO') {
+       tossOptions.flowMode = 'DIRECT';
+       tossOptions.easyPay = '카카오페이';
+    } else if (selectedMethod === 'NAVER') {
+       tossOptions.flowMode = 'DIRECT';
+       tossOptions.easyPay = '네이버페이';
+    }
+
+    tossPayments.requestPayment(tossMethod, tossOptions).catch(function (error) {
+      if (error.code === 'USER_CANCEL') {
+        alert('결제를 취소하셨습니다.');
+      } else {
+        alert(error.message);
+      }
+    });
+    
+    setShowConfirmModal(false);
+  };
 
   if (loading && !payment) {
     return <div className="container">로딩중...</div>;
@@ -250,6 +268,46 @@ export default function PaymentPage() {
         </button>
 
       </div>
+      
+      {/* 결제 최종 확인 모달 (2단계 로직) */}
+      {showConfirmModal && confirmData && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: '#fff', padding: '32px', borderRadius: '16px', width: '90%', maxWidth: '400px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <h2 style={{marginTop: 0, marginBottom: '24px', fontSize: '1.5rem', textAlign: 'center'}}>최종 결제 확인</h2>
+            <div style={{marginBottom: '16px', display: 'flex', justifyContent: 'space-between'}}>
+              <span style={{color: '#666'}}>결제 상품</span>
+              <strong style={{textAlign: 'right'}}>{confirmData.orderName}</strong>
+            </div>
+            <div style={{marginBottom: '16px', display: 'flex', justifyContent: 'space-between'}}>
+              <span style={{color: '#666'}}>주문 번호</span>
+              <strong style={{textAlign: 'right', fontSize: '0.9rem'}}>{confirmData.orderId}</strong>
+            </div>
+            <hr style={{border: 'none', borderTop: '1px solid #eee', margin: '24px 0'}} />
+            <div style={{marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <span style={{color: '#111', fontWeight: 'bold'}}>최종 승인 금액</span>
+              <strong style={{color: '#00c7ae', fontSize: '1.5rem'}}>{confirmData.finalAmount.toLocaleString()}원</strong>
+            </div>
+            <button 
+              onClick={handleTossPayment}
+              style={{ width: '100%', padding: '16px', backgroundColor: '#00c7ae', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginBottom: '8px' }}
+            >
+              토스페이먼츠로 결제 진행
+            </button>
+            <button 
+              onClick={() => setShowConfirmModal(false)}
+              style={{ width: '100%', padding: '16px', backgroundColor: '#f1f3f5', color: '#333', fontSize: '1rem', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+
     </Page>
   );
 }
