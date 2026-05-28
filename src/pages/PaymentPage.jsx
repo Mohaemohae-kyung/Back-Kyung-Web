@@ -15,8 +15,8 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [payment, setPayment] = useState(null);
 
-  // 토스페이먼츠 연동이므로 결제수단 선택 UI만 껍데기로 두고 고정해도 됩니다. (원래 UI 유지)
   const [selectedMethod, setSelectedMethod] = useState('CARD');
+  const [welcomeDiscountAmount, setWelcomeDiscountAmount] = useState(0);
 
   // E2E 암호화를 위한 서버 RSA 공개키
   const [rsaPublicKey, setRsaPublicKey] = useState(null);
@@ -29,7 +29,6 @@ export default function PaymentPage() {
   async function fetchPublicKey() {
     try {
       const res = await api.get('/api/payments/public-key');
-      // 응답 형식이 axios 혹은 fetch에 따라 다를 수 있으나 보통 res.data.publicKey 임.
       setRsaPublicKey(res?.publicKey || res?.data?.publicKey || res);
     } catch (error) {
       console.error('공개키 로딩 실패:', error);
@@ -61,14 +60,25 @@ export default function PaymentPage() {
 
       setLoading(true);
 
+      const targetType = payment?.bookingId ? 'BOOKING' : 'SERVICE_REQUEST';
+      const targetId = payment?.bookingId || payment?.serviceRequestId;
+
+      if (!targetId) {
+        alert('결제 대상 정보가 올바르지 않습니다.');
+        setLoading(false);
+        return;
+      }
+
       // --- [모의 해킹 실습 포인트] ---
       // 클라이언트 측에서 "결제하기"를 누를 때, 백엔드로 넘길 평문 파라미터입니다.
       // 해커는 브라우저 디버거(Sources 탭)에서 이 함수에 Breakpoint를 걸고
       // 아래의 welcomeDiscountAmount 값을 99900 등으로 변조하여 암호화 로직을 태웁니다.
       const payloadData = {
-        itemId: payment?.itemId || 1, 
-        welcomeDiscountAmount: 0, // 디버거로 조작해 볼 변수!
-        orderName: payment?.orderName || '결제 서비스'
+        targetType,
+        targetId,
+        paymentMethod: selectedMethod,
+        pgProvider: 'TEST_PG',
+        welcomeDiscountAmount: welcomeDiscountAmount // 디버거로 조작해 볼 변수!
       };
 
       console.log('1. 암호화 전 평문 데이터:', payloadData);
@@ -90,23 +100,35 @@ export default function PaymentPage() {
       const decryptedRes = e2eCrypto.decryptResponse(cipherTextFromDb);
       console.log('3. 서버 응답 로컬 해독 완료:', decryptedRes);
 
-      const { finalAmount, orderId } = decryptedRes;
+      const finalAmount = decryptedRes?.finalAmount || decryptedRes?.transaction?.finalAmount;
+      const orderId = decryptedRes?.orderId || decryptedRes?.transaction?.orderId;
 
-      if (!orderId || !finalAmount) {
+      if (!orderId || finalAmount === undefined) {
         throw new Error('결제 서버 응답 데이터가 유효하지 않습니다.');
       }
 
-      // 4) 토스 결제창 띄우기 (드디어 평문화된 최종 금액으로 팝업 호출)
+      // 4) 토스 결제창 띄우기 (간편결제 등 토스 옵션 호환 처리)
       const tossPayments = window.TossPayments('test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E');
       
-      tossPayments.requestPayment('카드', {
-        amount: finalAmount, // E2E 서버에서 해독해서 가져온 최종 금액 (해커가 조작했다면 100원)
+      let tossMethod = '카드';
+      let tossOptions = {
+        amount: Number(finalAmount), // E2E 서버에서 해독해서 가져온 최종 금액
         orderId: orderId,
-        orderName: payloadData.orderName,
+        orderName: payment.orderName || '결제 서비스',
         customerName: '고객명',
         successUrl: window.location.origin + `/payment/success?roomId=${roomId || ''}`,
         failUrl: window.location.origin + '/payment/fail',
-      }).catch(function (error) {
+      };
+
+      if (selectedMethod === 'KAKAO') {
+         tossOptions.flowMode = 'DIRECT';
+         tossOptions.easyPay = '카카오페이';
+      } else if (selectedMethod === 'NAVER') {
+         tossOptions.flowMode = 'DIRECT';
+         tossOptions.easyPay = '네이버페이';
+      }
+
+      tossPayments.requestPayment(tossMethod, tossOptions).catch(function (error) {
         if (error.code === 'USER_CANCEL') {
           alert('결제를 취소하셨습니다.');
         } else {
@@ -121,9 +143,17 @@ export default function PaymentPage() {
     }
   }
 
-  if (loading || !payment) {
+  if (loading && !payment) {
     return <div className="container">로딩중...</div>;
   }
+
+  if (!payment) {
+    return <div className="container">결제 정보를 불러올 수 없습니다.</div>;
+  }
+
+  const baseAmount = Number(payment.totalAmount || payment.paymentAmount || payment.amount || 0);
+  const discountAmount = Number(payment.discountAmount || 0) + Number(welcomeDiscountAmount);
+  const finalAmount = Math.max(0, baseAmount - discountAmount);
 
   return (
     <Page
@@ -134,14 +164,30 @@ export default function PaymentPage() {
 
         {/* 예약 상품 */}
         <div className="payment-card">
-          <h3 className="payment-title">예약 상품</h3>
+          <h3 className="payment-title">결제 상품</h3>
           <div className="payment-row">
             <span>서비스명</span>
             <b>{payment.orderName || '결제 서비스'}</b>
           </div>
           <div className="payment-row">
             <span>주문번호</span>
-            <b>{payment.orderId}</b>
+            <b>{payment.orderId || '-'}</b>
+          </div>
+        </div>
+
+        {/* 웰컴 할인 (모의 해킹 타겟) */}
+        <div className="payment-card">
+          <h3 className="payment-title">할인 혜택</h3>
+          <div className="payment-row">
+            <span>웰컴 할인 적용</span>
+            <select
+              value={welcomeDiscountAmount}
+              onChange={(e) => setWelcomeDiscountAmount(Number(e.target.value))}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+            >
+              <option value={0}>적용 안함</option>
+              <option value={1000}>1,000원 할인</option>
+            </select>
           </div>
         </div>
 
@@ -179,11 +225,16 @@ export default function PaymentPage() {
           <div className="payment-price-box">
             <div className="payment-row">
               <span>서비스 금액</span>
-              <b>{Number(payment.paymentAmount || payment.amount || 0).toLocaleString()}원</b>
+              <b>{baseAmount.toLocaleString()}원</b>
             </div>
+            <div className="payment-row">
+              <span>할인 금액</span>
+              <b>-{discountAmount.toLocaleString()}원</b>
+            </div>
+            <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '12px 0' }} />
             <div className="payment-row total">
               <span>최종 결제 금액</span>
-              <strong>{Number(payment.paymentAmount || payment.amount || 0).toLocaleString()}원</strong>
+              <strong style={{ fontSize: '1.2rem', color: '#111' }}>{finalAmount.toLocaleString()}원</strong>
             </div>
           </div>
         </div>
@@ -193,6 +244,7 @@ export default function PaymentPage() {
           className="payment-submit-btn"
           onClick={handleConfirmPayment}
           disabled={loading}
+          style={{ width: '100%', padding: '16px', backgroundColor: '#00c7ae', color: '#fff', fontSize: '1rem', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '16px' }}
         >
           {loading ? '결제 진행중...' : '결제하기'}
         </button>
