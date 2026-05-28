@@ -6,7 +6,8 @@ import {
   Bookmark,
   PenLine,
   UserRound,
-  UserX
+  UserX,
+  Ticket
 } from 'lucide-react';
 
 import {
@@ -63,11 +64,11 @@ export default function MyPage() {
   const [payments, setPayments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [bookingMsg, setBookingMsg] = useState('');
+  
+  const [coupons, setCoupons] = useState([]);
 
   const location = useLocation();
   const favoriteCount = favoriteExperts.length;
-  
-  const isExpert = userInfo?.role === 'EXPERT';
 
   const extractResult = res => {
     if (Array.isArray(res)) return res;
@@ -84,11 +85,20 @@ export default function MyPage() {
   const loadBookings = async () => {
     try {
       const res = await api.get('/api/bookings/me');
-      console.log('payments 응답', res);
       const list = Array.isArray(res?.result) ? res.result : res?.result?.content || [];
       setBookings(list);
     } catch (err) {
-      setBookingMsg(err.message || '예약 내역을 불러오지 못했어요.');
+      setBookingMsg(err.message || '예약 내역을 불러오지 못했습니다.');
+    }
+  };
+
+  const loadCoupons = async () => {
+    try {
+      const res = await api.get('/api/coupons/me');
+      const list = Array.isArray(res?.result) ? res.result : res?.result?.content || [];
+      setCoupons(list);
+    } catch (err) {
+      setCoupons([]);
     }
   };
 
@@ -108,13 +118,14 @@ export default function MyPage() {
         if (data.role !== 'EXPERT') {
           api.get('/api/payments/me')
             .then(res => {
-              console.log('결제내역 응답', res);
               const list = Array.isArray(res?.result) ? res.result : res?.result?.content || [];
               setPayments(list);
             })
             .catch(() => {
               setPayments([]);
             });
+
+          loadCoupons();
         }
       })
       .catch(() => {});
@@ -139,7 +150,7 @@ export default function MyPage() {
     } catch {
       setFavoriteExperts([]);
       setShowFavorites(true);
-      setMsg('찜한 고수 목록을 불러오지 못했어요.');
+      setMsg('찜한 고수 목록을 불러오지 못했습니다.');
     }
   };
 
@@ -159,7 +170,7 @@ export default function MyPage() {
 
   const withdraw = async e => {
     e.preventDefault();
-    if (!confirm('정말 회원탈퇴를 진행할까요?')) return;
+    if (!confirm('정말 회원탈퇴를 진행하시겠습니까?')) return;
     try {
       await api.delete('/api/users/me', { password: withdrawPassword });
       clearAuth();
@@ -170,30 +181,30 @@ export default function MyPage() {
     }
   };
 
+  const downloadWelcomeCoupon = async () => {
+    try {
+      await api.post('/api/coupons/welcome');
+      const updatedUser = { ...userInfo, welcomeCouponAvailable: 'N' };
+      setUserInfo(updatedUser);
+      updateStoredUser(updatedUser);
+      loadCoupons();
+      alert('웰컴 쿠폰이 발급되었습니다.');
+    } catch (err) {
+      alert(err.message || '쿠폰 발급에 실패했습니다.');
+    }
+  };
+
   const confirmedBookings = bookings.filter(
     booking => (booking.status || booking.bookingStatus) === 'CONFIRMED'
   );
 
-  const actionButton = (
-    <Link 
-      className="btn btn-primary" 
-      to={isExpert ? '/expert/edit' : '/expert/register'}
-    >
-      {isExpert ? '고수 프로필 수정' : '고수 프로필 등록'}
-    </Link>
-  );
-
   return (
-    <Page
-      title="마이페이지"
-      desc="내 정보와 요청, 결제 내역을 한 번에 확인합니다."
-      action={actionButton}
-    >
+    <Page title="마이페이지" desc="내 정보와 요청, 결제 내역을 확인합니다.">
       {msg && <p className="message">{msg}</p>}
 
       {location.state?.paymentCompleted && (
         <div className="mypage-success-banner">
-          결제가 완료되었습니다. 예약 내역에서 확인할 수 있어요.
+          결제가 완료되었습니다. 예약 내역에서 확인할 수 있습니다.
         </div>
       )}
 
@@ -208,9 +219,7 @@ export default function MyPage() {
           </div>
           <h2>{userInfo.nickname || userInfo.name || '사용자'}</h2>
           <p>{userInfo.email || '로그인 후 이용 정보를 확인할 수 있습니다.'}</p>
-          <Link className="btn btn-ghost full" to="/requests">
-            내 요청 보기
-          </Link>
+          <Link className="btn btn-ghost full" to="/requests">내 요청 보기</Link>
         </div>
 
         <div className="stats-grid">
@@ -228,9 +237,7 @@ export default function MyPage() {
         <section className="panel favorite-panel">
           <div className="card-row">
             <h2>찜한 고수</h2>
-            <button type="button" className="btn btn-ghost" onClick={() => setShowFavorites(false)}>
-              닫기
-            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => setShowFavorites(false)}>닫기</button>
           </div>
           <div className="expert-grid market-list-spacer">
             {favoriteExperts.length ? (
@@ -254,18 +261,56 @@ export default function MyPage() {
                 );
               })
             ) : (
-              <p className="muted">아직 찜한 고수가 없어요.</p>
+              <p className="muted">찜한 고수가 없습니다.</p>
             )}
           </div>
         </section>
       )}
 
       <div className="mypage-sections">
+        
+        {userInfo.role !== 'EXPERT' && (
+          <section className="panel">
+            <h2><Ticket size={20} /> 내 쿠폰</h2>
+            {userInfo.welcomeCouponAvailable === 'Y' && (
+              <div className="welcome-coupon-banner">
+                <p>신규 가입 웰컴 쿠폰을 발급받을 수 있습니다.</p>
+                <button type="button" className="btn btn-primary" onClick={downloadWelcomeCoupon}>
+                  웰컴 쿠폰 발급받기
+                </button>
+              </div>
+            )}
+            
+            {coupons.length === 0 ? (
+              <p className="muted">보유 중인 쿠폰이 없습니다.</p>
+            ) : (
+              <div className="coupon-list">
+                {coupons.map(coupon => (
+                  <div key={coupon.userCouponId || coupon.id} className="card payment-history-card">
+                    <div>
+                      <h3>{coupon.coupon?.name || coupon.name || '할인 쿠폰'}</h3>
+                      <p className="muted">
+                        사용 기한: {coupon.expiredAt ? formatBookingDateTime(coupon.expiredAt) : '제한 없음'}
+                      </p>
+                    </div>
+                    <div className="payment-history-right">
+                      <b>
+                        {Number(coupon.coupon?.discountAmount || coupon.discountAmount || 0).toLocaleString()}원
+                      </b>
+                      <span className="payment-status">{coupon.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         <section className="panel mypage-booking-section">
           <h2><CalendarDays size={20} /> 예약 내역</h2>
           {bookingMsg && <p className="error-text">{bookingMsg}</p>}
           {!bookingMsg && confirmedBookings.length === 0 && (
-            <p className="muted">아직 결제 완료된 예약 내역이 없어요.</p>
+            <p className="muted">결제 완료된 예약 내역이 없습니다.</p>
           )}
           <div className="mypage-booking-list">
             {confirmedBookings.map((booking) => (
@@ -287,7 +332,7 @@ export default function MyPage() {
           <section className="panel">
             <h2>결제 내역</h2>
             {payments.length === 0 ? (
-              <p className="muted">아직 결제 내역이 없어요.</p>
+              <p className="muted">결제 내역이 없습니다.</p>
             ) : (
               <div className="payment-history-list">
                 {payments.map(payment => (
@@ -306,6 +351,14 @@ export default function MyPage() {
             )}
           </section>
         )}
+
+        <section className="panel expert-banner">
+          <div>
+            <h2>고수로 활동하시겠습니까?</h2>
+            <p>전문가 프로필을 등록하면 고객에게 견적 요청을 받을 수 있습니다.</p>
+          </div>
+          <Link className="btn btn-primary" to="/expert/register">고수 활동 시작하기</Link>
+        </section>
 
         <section className="panel">
           <h2><UserRound size={20} /> 내 프로필 수정</h2>
