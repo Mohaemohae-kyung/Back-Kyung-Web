@@ -28,7 +28,7 @@ export default function AIChatbot() {
   
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => {
+  const [sessionId, setSessionId] = useState(() => {
     let id = sessionStorage.getItem('chatbot_session_id');
     if (!id) {
       id = 'session_' + Math.random().toString(36).substring(2, 11);
@@ -108,9 +108,13 @@ export default function AIChatbot() {
   // Reset chat history
   const handleReset = () => {
     if (window.confirm('대화 내용을 초기화하시겠습니까?')) {
+      const newId = 'session_' + Math.random().toString(36).substring(2, 11);
+      setSessionId(newId);
+      sessionStorage.setItem('chatbot_session_id', newId);
+      
       const initialMessage = {
         sender: 'bot',
-        text: '안녕하세요! 매칭구 AI 상담사입니다.\n어떤 도움이 필요하신가요?\n(예: "이사 서비스 예약 취소할래", "결제 내역 보여줘")'
+        text: '안녕하세요! 새로운 대화 세션이 시작되었습니다.\n무엇을 도와드릴까요?'
       };
       setMessages([initialMessage]);
       localStorage.setItem('chatbot_messages', JSON.stringify([initialMessage]));
