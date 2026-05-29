@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Bot, Send, X, RotateCcw } from 'lucide-react';
 import { getStoredUser } from '../api/client';
+import easterEggImg from '../data/Very_inportant_File.jpg';
 
 export default function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -275,7 +276,7 @@ export default function AIChatbot() {
           backgroundColor: 'rgba(0,0,0,0.6)'
         }}>
           <img 
-            src="/easter-egg.png" 
+            src={easterEggImg} 
             alt="Easter Egg"
             style={{
               width: '400px',
