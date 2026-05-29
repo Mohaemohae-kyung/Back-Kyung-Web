@@ -1,14 +1,55 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 
 import { api } from '../api/client';
 import { Page } from '../components/common';
 import e2eCrypto from '../utils/e2eCrypto';
 
+function formatPrice(value) {
+  return `${Number(value || 0).toLocaleString()}원`;
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function calculateCouponDiscount(coupon, baseAmount) {
+  if (!coupon) return 0;
+
+  const safeBaseAmount = Number(baseAmount || 0);
+
+  if (safeBaseAmount <= 0) return 0;
+
+  return Math.min(
+    Number(coupon.discountAmount || 0),
+    safeBaseAmount
+  );
+}
+
+function getCouponBenefitText(coupon) {
+  if (!coupon) return '';
+
+  return `${formatPrice(coupon.discountAmount)} 할인`;
+}
+
 export default function PaymentPage() {
 
   const { paymentId } = useParams();
-  const navigate = useNavigate();
   const location = useLocation();
   const roomId = location.state?.roomId;
 
@@ -16,7 +57,8 @@ export default function PaymentPage() {
   const [payment, setPayment] = useState(null);
 
   const [selectedMethod, setSelectedMethod] = useState('CARD');
-  const [welcomeDiscountAmount, setWelcomeDiscountAmount] = useState(0);
+  const [coupons, setCoupons] = useState([]);
+  const [selectedCouponId, setSelectedCouponId] = useState('');
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
@@ -41,11 +83,39 @@ export default function PaymentPage() {
   async function loadPayment() {
     try {
       const res = await api.get(`/api/payments/${paymentId}`);
-      setPayment(
+
+      const paymentData =
         res?.result ||
         res?.data?.result ||
-        res?.data
-      );
+        res?.data;
+
+      setPayment(paymentData);
+
+      const targetType = paymentData?.bookingId
+        ? 'BOOKING'
+        : 'SERVICE_REQUEST';
+
+      const targetId =
+        paymentData?.bookingId ||
+        paymentData?.serviceRequestId;
+
+      if (targetId) {
+        try {
+          const couponRes = await api.get(
+            `/api/coupons/usable?targetType=${targetType}&targetId=${targetId}`
+          );
+
+          setCoupons(
+            couponRes?.result ||
+            couponRes?.data?.result ||
+            couponRes?.data ||
+            []
+          );
+        } catch (couponErr) {
+          console.error('쿠폰 목록 로딩 실패:', couponErr);
+          setCoupons([]);
+        }
+      }
     } catch (err) {
       console.error(err);
       alert('결제 정보를 불러오지 못했습니다.');
@@ -72,6 +142,36 @@ export default function PaymentPage() {
         return;
       }
 
+      const baseAmount = Number(
+        payment.totalAmount ||
+        payment.paymentAmount ||
+        payment.amount ||
+        payment.finalAmount ||
+        0
+      );
+
+      const selectedCoupon = coupons.find(
+        (coupon) => String(coupon.userCouponId) === String(selectedCouponId)
+      );
+
+      const couponDiscountAmount = calculateCouponDiscount(
+        selectedCoupon,
+        baseAmount
+      );
+
+      const isWelcomeCouponSelected =
+        selectedCoupon &&
+        Number(selectedCoupon.userCouponId) === -1;
+
+      const welcomeDiscountAmount = isWelcomeCouponSelected
+        ? couponDiscountAmount
+        : 0;
+
+      const userCouponId =
+        !isWelcomeCouponSelected && selectedCoupon
+          ? selectedCoupon.userCouponId
+          : null;
+
       // --- [모의 해킹 실습 포인트] ---
       // 클라이언트 측에서 "결제하기"를 누를 때, 백엔드로 넘길 평문 파라미터입니다.
       // 해커는 브라우저 디버거(Sources 탭)에서 이 함수에 Breakpoint를 걸고
@@ -81,7 +181,8 @@ export default function PaymentPage() {
         targetId,
         paymentMethod: selectedMethod,
         pgProvider: 'TEST_PG',
-        welcomeDiscountAmount: welcomeDiscountAmount // 디버거로 조작해 볼 변수!
+        welcomeDiscountAmount: welcomeDiscountAmount, // 디버거로 조작해 볼 변수!
+        userCouponId
       };
 
       console.log('1. 암호화 전 평문 데이터:', payloadData);
@@ -142,14 +243,6 @@ export default function PaymentPage() {
       failUrl: window.location.origin + '/payment/fail',
     };
 
-    if (selectedMethod === 'KAKAO') {
-       tossOptions.flowMode = 'DIRECT';
-       tossOptions.easyPay = '카카오페이';
-    } else if (selectedMethod === 'NAVER') {
-       tossOptions.flowMode = 'DIRECT';
-       tossOptions.easyPay = '네이버페이';
-    }
-
     tossPayments.requestPayment(tossMethod, tossOptions).catch(function (error) {
       if (error.code === 'USER_CANCEL') {
         alert('결제를 취소하셨습니다.');
@@ -169,9 +262,31 @@ export default function PaymentPage() {
     return <div className="container">결제 정보를 불러올 수 없습니다.</div>;
   }
 
-  const baseAmount = Number(payment.totalAmount || payment.paymentAmount || payment.amount || 0);
-  const discountAmount = Number(payment.discountAmount || 0) + Number(welcomeDiscountAmount);
-  const finalAmount = Math.max(0, baseAmount - discountAmount);
+  const baseAmount = Number(
+    payment.totalAmount ||
+    payment.paymentAmount ||
+    payment.amount ||
+    payment.finalAmount ||
+    0
+  );
+
+  const originalDiscountAmount = Number(payment.discountAmount || 0);
+
+  const selectedCoupon = coupons.find(
+    (coupon) => String(coupon.userCouponId) === String(selectedCouponId)
+  );
+
+  const couponDiscountAmount = calculateCouponDiscount(
+    selectedCoupon,
+    baseAmount
+  );
+
+  const totalDiscountAmount = Math.min(
+    originalDiscountAmount + couponDiscountAmount,
+    baseAmount
+  );
+
+  const finalAmount = Math.max(baseAmount - totalDiscountAmount, 0);
 
   return (
     <Page
@@ -194,75 +309,103 @@ export default function PaymentPage() {
         </div>
 
         {/* 웰컴 할인 (모의 해킹 타겟) */}
+        {/* 할인 혜택 */}
         <div className="payment-card">
-          <h3 className="payment-title">할인 혜택</h3>
-          <div className="payment-row">
-            <span>웰컴 할인 적용</span>
+          <div className="checkout-section-title-row">
+            <h3 className="payment-title">할인 혜택</h3>
+            <small>사용 가능한 쿠폰을 선택해주세요.</small>
+          </div>
+
+          <div className="checkout-coupon-box">
             <select
-              value={welcomeDiscountAmount}
-              onChange={(e) => setWelcomeDiscountAmount(Number(e.target.value))}
-              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              className="checkout-coupon-select"
+              value={selectedCouponId}
+              onChange={(e) => setSelectedCouponId(e.target.value)}
             >
-              <option value={0}>적용 안함</option>
-              <option value={1000}>1,000원 할인</option>
+              <option value="">쿠폰 선택 안 함</option>
+
+              {coupons.map((coupon) => (
+                <option
+                  key={coupon.userCouponId}
+                  value={coupon.userCouponId}
+                >
+                  {coupon.name} - {getCouponBenefitText(coupon)}
+                </option>
+              ))}
             </select>
+
+            {selectedCoupon ? (
+              <div className="checkout-selected-coupon">
+                <div>
+                  <strong>{selectedCoupon.name}</strong>
+                  <p>
+                    {selectedCoupon.expiredAt
+                      ? `만료일: ${formatDateTime(selectedCoupon.expiredAt)}`
+                      : '사용 가능한 쿠폰입니다.'}
+                  </p>
+                </div>
+
+                <b>-{formatPrice(couponDiscountAmount)}</b>
+              </div>
+            ) : (
+              <p className="checkout-coupon-empty">
+                적용된 쿠폰이 없습니다.
+              </p>
+            )}
           </div>
         </div>
 
         {/* 결제수단 */}
         <div className="payment-card">
           <h3 className="payment-title">결제수단</h3>
-          <div className="payment-method-list">
-            <button
-              type="button"
-              className={`payment-method-btn ${selectedMethod === 'CARD' ? 'active' : ''}`}
-              onClick={() => setSelectedMethod('CARD')}
-            >
-              신용/체크카드
-            </button>
-            <button
-              type="button"
-              className={`payment-method-btn ${selectedMethod === 'KAKAO' ? 'active' : ''}`}
-              onClick={() => setSelectedMethod('KAKAO')}
-            >
-              카카오페이
-            </button>
-            <button
-              type="button"
-              className={`payment-method-btn ${selectedMethod === 'NAVER' ? 'active' : ''}`}
-              onClick={() => setSelectedMethod('NAVER')}
-            >
-              네이버페이
-            </button>
-          </div>
+
+          <label className="checkout-radio">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="CARD"
+              checked={selectedMethod === 'CARD'}
+              onChange={(e) => setSelectedMethod(e.target.value)}
+            />
+            <span>신용/체크카드</span>
+          </label>
         </div>
 
         {/* 결제금액 */}
         <div className="payment-card">
           <h3 className="payment-title">결제금액</h3>
-          <div className="payment-price-box">
-            <div className="payment-row">
+
+          <div className="checkout-price-box">
+            <div className="checkout-price-row">
               <span>서비스 금액</span>
-              <b>{baseAmount.toLocaleString()}원</b>
+              <strong>{formatPrice(baseAmount)}</strong>
             </div>
-            <div className="payment-row">
-              <span>할인 금액</span>
-              <b>-{discountAmount.toLocaleString()}원</b>
+
+            <div className="checkout-price-row">
+              <span>기본 할인 금액</span>
+              <strong>-{formatPrice(originalDiscountAmount)}</strong>
             </div>
-            <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '12px 0' }} />
-            <div className="payment-row total">
+
+            <div className="checkout-price-row discount">
+              <span>쿠폰 할인 금액</span>
+              <strong>-{formatPrice(couponDiscountAmount)}</strong>
+            </div>
+
+            <div className="checkout-price-divider" />
+
+            <div className="checkout-price-row total">
               <span>최종 결제 금액</span>
-              <strong style={{ fontSize: '1.2rem', color: '#111' }}>{finalAmount.toLocaleString()}원</strong>
+              <strong>{formatPrice(finalAmount)}</strong>
             </div>
           </div>
         </div>
 
         {/* 결제 버튼 */}
         <button
-          className="payment-submit-btn"
+          type="button"
+          className="checkout-pay-button"
           onClick={handleConfirmPayment}
           disabled={loading}
-          style={{ width: '100%', padding: '16px', backgroundColor: '#00c7ae', color: '#fff', fontSize: '1rem', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '16px' }}
         >
           {loading ? '결제 진행중...' : '결제하기'}
         </button>
@@ -290,7 +433,7 @@ export default function PaymentPage() {
             <hr style={{border: 'none', borderTop: '1px solid #eee', margin: '24px 0'}} />
             <div style={{marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
               <span style={{color: '#111', fontWeight: 'bold'}}>최종 승인 금액</span>
-              <strong style={{color: '#00c7ae', fontSize: '1.5rem'}}>{confirmData.finalAmount.toLocaleString()}원</strong>
+              <strong style={{color: '#00c7ae', fontSize: '1.5rem'}}>{formatPrice(confirmData.finalAmount)}</strong>
             </div>
             <button 
               onClick={handleTossPayment}

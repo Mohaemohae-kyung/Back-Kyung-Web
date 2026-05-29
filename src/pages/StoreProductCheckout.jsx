@@ -254,14 +254,6 @@ export default function StoreProductCheckout() {
       failUrl: window.location.origin + '/payment/fail',
     };
 
-    if (paymentMethod === 'KAKAO') {
-       tossOptions.flowMode = 'DIRECT';
-       tossOptions.easyPay = '카카오페이';
-    } else if (paymentMethod === 'NAVER') {
-       tossOptions.flowMode = 'DIRECT';
-       tossOptions.easyPay = '네이버페이';
-    }
-
     tossPayments.requestPayment(tossMethod, tossOptions).catch(function (error) {
       if (error.code === 'USER_CANCEL') {
         alert('결제를 취소하셨습니다.');
@@ -376,16 +368,6 @@ export default function StoreProductCheckout() {
               onChange={(e) => setPaymentMethod(e.target.value)}
             />
             <span>신용/체크카드</span>
-          </label>
-          <label className="checkout-radio" style={{marginLeft: '12px'}}>
-            <input
-              type="radio"
-              name="paymentMethod"
-              value="KAKAO"
-              checked={paymentMethod === 'KAKAO'}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-            />
-            <span>카카오페이</span>
           </label>
         </section>
 
