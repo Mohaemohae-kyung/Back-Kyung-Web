@@ -15,9 +15,6 @@ import {
   TreeSelectField
 } from '../components/common';
 
-// 포트폴리오 URL 임시 고정값
-const DEFAULT_PORTFOLIO_URL = 'https://example.com/';
-
 // API 응답에서 result만 꺼내기
 const getResult = (res) => {
   return res?.result || res?.data?.result || res;
@@ -38,6 +35,27 @@ const findChildIdByName = (groups, name) => {
   }
 
   return '';
+};
+
+// 백엔드가 내려주는 portfolioWebViewUrl에서 원래 외부 포트폴리오 주소만 꺼내기
+const extractExternalPortfolioUrl = (portfolioWebViewUrl) => {
+  if (!portfolioWebViewUrl) return '';
+
+  try {
+    const url = new URL(portfolioWebViewUrl);
+    return url.searchParams.get('url') || '';
+  } catch (err) {
+    const marker = 'url=';
+    const index = portfolioWebViewUrl.indexOf(marker);
+
+    if (index === -1) {
+      return portfolioWebViewUrl;
+    }
+
+    return decodeURIComponent(
+      portfolioWebViewUrl.slice(index + marker.length)
+    );
+  }
 };
 
 // 이름 목록을 id 목록으로 변환
@@ -61,7 +79,8 @@ export default function ExpertRegister() {
     careerYears: '',
     mainLocationId: '',
     mainCategoryId: '',
-    subCategoryIds: []
+    subCategoryIds: [],
+    externalPortfolioUrl: ''
   });
 
   const [subServiceDraft, setSubServiceDraft] = useState('');
@@ -140,7 +159,12 @@ export default function ExpertRegister() {
               : '',
           mainLocationId,
           mainCategoryId,
-          subCategoryIds
+          subCategoryIds,
+
+          // 수정 화면에서 기존 포트폴리오 주소 표시
+          externalPortfolioUrl:
+            detail.externalPortfolioUrl ||
+            extractExternalPortfolioUrl(detail.portfolioWebViewUrl)
         });
 
       } catch (err) {
@@ -413,7 +437,10 @@ export default function ExpertRegister() {
       mainCategoryId: Number(form.mainCategoryId),
       mainLocationId: Number(form.mainLocationId),
       categoryIds: distinctCategoryIds,
-      externalPortfolioUrl: DEFAULT_PORTFOLIO_URL
+
+      // 사용자가 입력한 외부 포트폴리오 주소
+      externalPortfolioUrl:
+        form.externalPortfolioUrl.trim() || null
     };
 
     console.log(
@@ -599,9 +626,18 @@ export default function ExpertRegister() {
               selectRef={mainCategoryRef}
               onChange={(value) => {
 
+                // 추가 서비스 선택 대기값이 새 메인 서비스와 같으면 초기화
+                setSubServiceDraft((prev) =>
+                  String(prev) === String(value) ? '' : prev
+                );
+
                 setForm((prev) => ({
                   ...prev,
+
+                  // 선택한 값을 메인 서비스로 저장
                   mainCategoryId: value,
+
+                  // 혹시 추가 서비스 목록에 같은 값이 있으면 제거
                   subCategoryIds: prev.subCategoryIds.filter(
                     (id) => String(id) !== String(value)
                   )
@@ -610,6 +646,10 @@ export default function ExpertRegister() {
                 clearError('mainCategoryId');
 
               }}
+
+              // 이미 추가 서비스로 선택한 항목은 메인 서비스에서 선택 불가
+              disabledIds={form.subCategoryIds}
+
               groups={SERVICE_CATEGORY_GROUPS}
               placeholder="메인 서비스를 선택해주세요"
             />
@@ -683,6 +723,18 @@ export default function ExpertRegister() {
               )}
 
             </div>
+
+            <Input
+              label="포트폴리오"
+              value={form.externalPortfolioUrl}
+              onChange={(v) => {
+                setForm({
+                  ...form,
+                  externalPortfolioUrl: v
+                });
+              }}
+              placeholder="외부 포트폴리오 주소를 입력해주세요. (이미지 등)"
+            />
 
             {msg && (
               <p className="error-text">

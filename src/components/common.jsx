@@ -140,10 +140,23 @@ export function TreeSelectField({
   groups = [],
   placeholder = '선택해주세요',
   error,
-  selectRef
+  selectRef,
+  disabledIds = []
 }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
+
+  const disabledIdSet = useMemo(() => {
+    return new Set(
+      (disabledIds || [])
+        .filter(Boolean)
+        .map((id) => String(id))
+    );
+  }, [disabledIds]);
+
+  const isDisabledChild = (childId) => {
+    return disabledIdSet.has(String(childId));
+  };
 
   const selectedInfo = useMemo(() => {
     for (const group of groups) {
@@ -189,13 +202,18 @@ export function TreeSelectField({
   );
 
   return (
-    <label className={`field tree-field ${error ? 'field-error' : ''}`} ref={wrapperRef}>
+    <label
+      className={`field tree-field ${error ? 'field-error' : ''}`}
+      ref={wrapperRef}
+    >
       <span>{label}</span>
 
       <button
         ref={selectRef}
         type="button"
-        className={`tree-select-trigger ${selectedInfo ? 'has-value' : 'is-placeholder'} ${error ? 'input-error' : ''}`}
+        className={`tree-select-trigger ${
+          selectedInfo ? 'has-value' : 'is-placeholder'
+        } ${error ? 'input-error' : ''}`}
         onClick={() => setOpen((prev) => !prev)}
       >
         <span className="tree-select-text">
@@ -203,7 +221,10 @@ export function TreeSelectField({
             ? `${selectedInfo.groupName} > ${selectedInfo.childName}`
             : placeholder}
         </span>
-        <span className="tree-select-arrow">{open ? '⌃' : '⌄'}</span>
+
+        <span className="tree-select-arrow">
+          {open ? '⌃' : '⌄'}
+        </span>
       </button>
 
       {open && (
@@ -214,7 +235,9 @@ export function TreeSelectField({
                 key={group.id}
                 type="button"
                 className={`tree-select-group ${
-                  String(activeGroupId) === String(group.id) ? 'active' : ''
+                  String(activeGroupId) === String(group.id)
+                    ? 'active'
+                    : ''
                 }`}
                 onClick={() => setActiveGroupId(String(group.id))}
               >
@@ -224,26 +247,38 @@ export function TreeSelectField({
           </div>
 
           <div className="tree-select-items">
-            {activeGroup?.children?.map((child) => (
-              <button
-                key={child.id}
-                type="button"
-                className={`tree-select-item ${
-                  String(value) === String(child.id) ? 'selected' : ''
-                }`}
-                onClick={() => {
-                  onChange(String(child.id));
-                  setOpen(false);
-                }}
-              >
-                {child.name}
-              </button>
-            ))}
+            {activeGroup?.children?.map((child) => {
+              const disabled = isDisabledChild(child.id);
+              const selected = String(value) === String(child.id);
+
+              return (
+                <button
+                  key={child.id}
+                  type="button"
+                  disabled={disabled}
+                  className={`tree-select-item ${
+                    selected ? 'selected' : ''
+                  } ${disabled ? 'disabled' : ''}`}
+                  onClick={() => {
+                    if (disabled) return;
+
+                    onChange(String(child.id));
+                    setOpen(false);
+                  }}
+                >
+                  {child.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {error && <small className="field-error-text">{error}</small>}
+      {error && (
+        <small className="field-error-text">
+          {error}
+        </small>
+      )}
     </label>
   );
 }
