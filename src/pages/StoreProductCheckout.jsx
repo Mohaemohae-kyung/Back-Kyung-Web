@@ -141,8 +141,8 @@ export default function StoreProductCheckout() {
       const decryptedRes = e2eCrypto.decryptResponse(cipherTextFromDb);
       console.log('해독된 준비 응답:', decryptedRes);
 
-      const orderId = decryptedRes?.orderId || decryptedRes?.transaction?.orderId;
-      const finalAmount = Number(decryptedRes?.finalAmount || checkout.finalAmount || 0);
+      const orderId = decryptedRes?.orderId ?? decryptedRes?.transaction?.orderId;
+      const finalAmount = Number(decryptedRes?.finalAmount ?? checkout.finalAmount ?? 0);
 
       if (!orderId) {
         alert('주문번호를 확인할 수 없습니다.');

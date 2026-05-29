@@ -103,8 +103,8 @@ export default function PaymentPage() {
       const decryptedRes = e2eCrypto.decryptResponse(cipherTextFromDb);
       console.log('3. 서버 응답 로컬 해독 완료:', decryptedRes);
 
-      const finalAmount = decryptedRes?.finalAmount || decryptedRes?.transaction?.finalAmount;
-      const orderId = decryptedRes?.orderId || decryptedRes?.transaction?.orderId;
+      const finalAmount = decryptedRes?.finalAmount ?? decryptedRes?.transaction?.finalAmount;
+      const orderId = decryptedRes?.orderId ?? decryptedRes?.transaction?.orderId;
 
       if (!orderId || finalAmount === undefined) {
         throw new Error('결제 서버 응답 데이터가 유효하지 않습니다.');
