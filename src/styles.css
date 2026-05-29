@@ -4325,3 +4325,12 @@ body {
   color: #9ca3af;
   cursor: not-allowed;
 }
+
+.mypage-header-action{
+  display:flex;
+  justify-content:flex-end;
+
+  margin-top:-110px;
+  margin-right:44px;
+  margin-bottom:65px;
+}

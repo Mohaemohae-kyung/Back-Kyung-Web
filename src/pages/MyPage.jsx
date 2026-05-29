@@ -200,6 +200,22 @@ export default function MyPage() {
 
   return (
     <Page title="마이페이지" desc="내 정보와 요청, 결제 내역을 확인합니다.">
+
+      <div className="mypage-header-action">
+        <Link
+          className="btn btn-primary"
+          to={
+            userInfo.expertProfileId
+              ? '/expert/register?mode=edit'
+              : '/expert/register'
+          }
+        >
+          {userInfo.expertProfileId
+            ? '고수 프로필 수정'
+            : '고수 활동 시작하기'}
+        </Link>
+      </div>
+
       {msg && <p className="message">{msg}</p>}
 
       {location.state?.paymentCompleted && (
@@ -351,14 +367,6 @@ export default function MyPage() {
             )}
           </section>
         )}
-
-        <section className="panel expert-banner">
-          <div>
-            <h2>고수로 활동하시겠습니까?</h2>
-            <p>전문가 프로필을 등록하면 고객에게 견적 요청을 받을 수 있습니다.</p>
-          </div>
-          <Link className="btn btn-primary" to="/expert/register">고수 활동 시작하기</Link>
-        </section>
 
         <section className="panel">
           <h2><UserRound size={20} /> 내 프로필 수정</h2>
