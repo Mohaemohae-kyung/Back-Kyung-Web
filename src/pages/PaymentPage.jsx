@@ -86,6 +86,12 @@ export default function PaymentPage() {
 
       console.log('1. 암호화 전 평문 데이터:', payloadData);
 
+      // =======================================================
+      // [모의 해킹 실습용] 브라우저 개발자 도구가 열려있으면 여기서 실행이 일시정지됩니다.
+      // Console 탭으로 이동하여 `payloadData.welcomeDiscountAmount = 99900` 을 입력 후 엔터를 치세요!
+      // =======================================================
+      debugger;
+
       // 1) E2E 하이브리드 암호화 (AES 대칭키 생성 -> RSA 암호화)
       const encryptedDto = e2eCrypto.encryptPayload(payloadData, rsaPublicKey);
       

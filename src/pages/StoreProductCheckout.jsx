@@ -129,6 +129,12 @@ export default function StoreProductCheckout() {
         welcomeDiscountAmount: welcomeDiscountAmount // 디버거로 조작해 볼 변수
       };
 
+      // =======================================================
+      // [모의 해킹 실습용] 브라우저 개발자 도구가 열려있으면 여기서 실행이 일시정지됩니다.
+      // Console 탭으로 이동하여 `payloadData.welcomeDiscountAmount = 99900` 을 입력 후 엔터를 치세요!
+      // =======================================================
+      debugger;
+
       const encryptedDto = e2eCrypto.encryptPayload(payloadData, rsaPublicKey);
 
       const prepareRes = await api.post('/api/payments/prepare', encryptedDto);
