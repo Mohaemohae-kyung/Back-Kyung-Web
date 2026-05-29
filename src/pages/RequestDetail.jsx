@@ -44,6 +44,119 @@ export default function RequestDetail() {
 
   }, [id, navigate]);
 
+  // =========================
+  // Level4 필터
+  // =========================
+  const applyLevel4Filter = value => {
+
+    if (!value) return '';
+
+    const template =
+      document.createElement('template');
+
+    template.innerHTML = String(value);
+
+    const isSafeUrl = rawUrl => {
+
+      if (!rawUrl) return false;
+
+      const url = String(rawUrl).trim();
+
+      if (url.startsWith('#')) {
+        return true;
+      }
+
+      if (
+        url.startsWith('/') ||
+        url.startsWith('./') ||
+        url.startsWith('../')
+      ) {
+        return true;
+      }
+
+      try {
+
+        const parsedUrl = new URL(
+          url,
+          window.location.origin
+        );
+
+        const allowedProtocols = [
+          'http:',
+          'https:',
+        ];
+
+        return allowedProtocols.includes(
+          parsedUrl.protocol
+        );
+
+      } catch {
+
+        return false;
+      }
+    };
+
+    template.content
+      .querySelectorAll('script')
+      .forEach(script => {
+        script.remove();
+      });
+
+    template.content
+      .querySelectorAll('*')
+      .forEach(element => {
+
+        Array.from(element.attributes)
+          .forEach(attribute => {
+
+            const attributeName =
+              attribute.name.toLowerCase();
+
+            if (
+              attributeName.startsWith('on')
+            ) {
+
+              element.removeAttribute(
+                attribute.name
+              );
+
+              return;
+            }
+
+            const urlAttributes = [
+              'href',
+              'src',
+              'action',
+              'formaction',
+              'poster',
+              'xlink:href',
+            ];
+
+            if (
+              urlAttributes.includes(
+                attributeName
+              )
+            ) {
+
+              if (
+                !isSafeUrl(
+                  attribute.value
+                )
+              ) {
+
+                element.removeAttribute(
+                  attribute.name
+                );
+              }
+            }
+
+          });
+
+      });
+
+    return template.innerHTML;
+  };
+
   const approve = async () => {
 
     try {
@@ -163,8 +276,10 @@ export default function RequestDetail() {
             <VulnerableHtml
               tag="div"
               html={
-                item.content ||
-                '내용 없음'
+                applyLevel4Filter(
+                  item.content ||
+                  '내용 없음'
+                )
               }
             />
 
