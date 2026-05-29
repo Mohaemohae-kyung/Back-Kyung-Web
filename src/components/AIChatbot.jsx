@@ -6,6 +6,8 @@ import { getStoredUser } from '../api/client';
 
 export default function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
+  const [eggCount, setEggCount] = useState(0);
+  const [showEgg, setShowEgg] = useState(false);
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('chatbot_messages');
     if (saved) {
@@ -104,15 +106,24 @@ export default function AIChatbot() {
 
   // Reset chat history
   const handleReset = () => {
-    if (window.confirm('대화 기록을 전부 초기화하시겠습니까?')) {
-      const initialMessages = [
-        {
-          sender: 'bot',
-          text: '대화 기록이 초기화되었습니다. 무엇이든 편하게 물어보세요! 🤖'
-        }
-      ];
-      setMessages(initialMessages);
-      localStorage.setItem('chatbot_messages', JSON.stringify(initialMessages));
+    if (window.confirm('대화 내용을 초기화하시겠습니까?')) {
+      const initialMessage = {
+        sender: 'bot',
+        text: '안녕하세요! 매칭구 AI 상담사입니다.\n어떤 도움이 필요하신가요?\n(예: "이사 서비스 예약 취소할래", "결제 내역 보여줘")'
+      };
+      setMessages([initialMessage]);
+      localStorage.setItem('chatbot_messages', JSON.stringify([initialMessage]));
+    }
+  };
+
+  const handleBotClick = () => {
+    const newCount = eggCount + 1;
+    if (newCount >= 5) {
+      setShowEgg(true);
+      setEggCount(0);
+      setTimeout(() => setShowEgg(false), 3000); // 3초 뒤에 사라짐
+    } else {
+      setEggCount(newCount);
     }
   };
 
@@ -155,7 +166,7 @@ export default function AIChatbot() {
           {/* Header */}
           <div className="chatbot-header">
             <div className="chatbot-title-area">
-              <div className="chatbot-avatar">
+              <div className="chatbot-avatar" onClick={handleBotClick} style={{ cursor: 'pointer', userSelect: 'none' }}>
                 <Bot size={20} />
               </div>
               <div>
@@ -245,6 +256,44 @@ export default function AIChatbot() {
               <Send size={16} />
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Easter Egg Overlay */}
+      {showEgg && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 999999,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          pointerEvents: 'none',
+          backgroundColor: 'rgba(0,0,0,0.6)'
+        }}>
+          <img 
+            src="/easter-egg.png" 
+            alt="Easter Egg"
+            style={{
+              width: '400px',
+              height: '400px',
+              objectFit: 'contain',
+              animation: 'spinAndScale 3s ease-in-out forwards'
+            }} 
+          />
+          <style>
+            {`
+              @keyframes spinAndScale {
+                0% { transform: scale(0) rotate(0deg); opacity: 0; }
+                20% { transform: scale(1.2) rotate(720deg); opacity: 1; }
+                80% { transform: scale(1.2) rotate(1440deg); opacity: 1; }
+                100% { transform: scale(0) rotate(2160deg); opacity: 0; }
+              }
+            `}
+          </style>
         </div>
       )}
     </div>
