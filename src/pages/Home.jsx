@@ -249,30 +249,6 @@ export default function Home() {
 
       </section>
 
-      <section className="container section cta-panel">
-
-        <div>
-
-          <h2>
-            고수로 활동하고 싶나요?
-          </h2>
-
-          <p>
-            전문 분야와 활동 지역을 등록하고
-            고객의 요청을 받아보세요.
-          </p>
-
-        </div>
-
-        <Link
-          className="btn btn-primary"
-          to="/expert/register"
-        >
-          고수 서비스 등록
-        </Link>
-
-      </section>
-
     </>
   );
 }
