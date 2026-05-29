@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
+import e2eCrypto from '../utils/e2eCrypto';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -21,12 +22,37 @@ export default function PaymentSuccess() {
       }
 
       try {
-        // 메인 백엔드(Spring Boot)로 최종 승인 요청 전송
-        await api.post('/api/payments/confirm', { 
-          paymentKey, 
-          orderId, 
-          amount 
-        });
+        // 1) 새로운 세션의 RSA 공개키 발급
+        const keyRes = await api.get('/api/payments/public-key');
+        const rsaPublicKey = keyRes?.publicKey || keyRes?.data?.publicKey || keyRes;
+        
+        if (!rsaPublicKey) throw new Error("서버 공개키를 가져오지 못했습니다.");
+
+        // 2) 토스 인증 결과를 평문 Payload로 구성
+        const payloadData = {
+          paymentKey,
+          orderId,
+          amount
+        };
+
+        console.log('1. Confirm 암호화 전 평문:', payloadData);
+
+        // 3) 양방향 E2E 암호화
+        const encryptedDto = e2eCrypto.encryptPayload(payloadData, rsaPublicKey);
+        console.log('2. Confirm E2E 암호문 전송:', encryptedDto);
+
+        console.log('2. E2E Confirm 암호화 완료, 서버(프록시)로 전송:', encryptedDto);
+        const confirmRes = await api.post('/api/payments/confirm', encryptedDto);
+
+        const cipherTextFromDb = confirmRes?.result?.cipherText || confirmRes?.data?.cipherText || confirmRes?.cipherText;
+
+        if (!cipherTextFromDb) {
+          throw new Error('서버로부터 Confirm 암호화된 응답을 받지 못했습니다.');
+        }
+
+        // 5) 응답 복호화
+        const decryptedRes = e2eCrypto.decryptResponse(cipherTextFromDb);
+        console.log('3. Confirm 서버 응답 해독:', decryptedRes);
 
         // api.js(client.js) 내부에서 에러(isSuccess=false) 발생 시 자동으로 catch 블록으로 넘어가므로
         // 여기까지 코드가 도달했다면 결제가 성공한 것입니다.

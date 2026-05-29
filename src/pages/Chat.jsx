@@ -11,6 +11,7 @@ import { jwtDecode } from 'jwt-decode';
 
 import { Page } from '../components/common';
 import { api } from '../api/client';
+import e2eCrypto from '../utils/e2eCrypto';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -45,6 +46,21 @@ export default function Chat() {
 
   const [paymentTitle, setPaymentTitle] =
     useState('');
+
+  const [rsaPublicKey, setRsaPublicKey] =
+    useState(null);
+
+  useEffect(() => {
+    const fetchPublicKey = async () => {
+      try {
+        const res = await api.get('/api/payments/public-key');
+        setRsaPublicKey(res?.publicKey || res?.data?.publicKey || res);
+      } catch (error) {
+        console.error('공개키 로딩 실패:', error);
+      }
+    };
+    fetchPublicKey();
+  }, []);
 
   const [paymentAmount, setPaymentAmount] =
     useState('');
@@ -617,19 +633,26 @@ export default function Chat() {
                               budget: Number(paymentAmount)
                             }
                           );
+                          
+                          if (!rsaPublicKey) {
+                            alert('보안 연결 설정(키 교환) 중입니다. 잠시 후 시도해주세요.');
+                            setPaymentLoading(false);
+                            return;
+                          }
+
+                          const payloadData = {
+                              targetType: 'SERVICE_REQUEST',
+                              targetId: currentRoom?.serviceRequestId,
+                              paymentMethod: 'CARD',
+                              pgProvider: 'TEST_PG',
+                              welcomeDiscountAmount: 0 // 디버거로 조작해 볼 변수
+                          };
+
+                          const encryptedDto = e2eCrypto.encryptPayload(payloadData, rsaPublicKey);
 
                           await api.post(
                             '/api/payments/prepare',
-                            {
-                              targetType: 'SERVICE_REQUEST',
-
-                              targetId:
-                                currentRoom?.serviceRequestId,
-
-                              paymentMethod: 'CARD',
-
-                              pgProvider: 'MOCK'
-                            }
+                            encryptedDto
                           );
 
                           setPaymentModalOpen(false);

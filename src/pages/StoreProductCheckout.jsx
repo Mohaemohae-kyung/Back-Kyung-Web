@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { api } from '../api/client';
+import e2eCrypto from '../utils/e2eCrypto';
 
 function formatPrice(value) {
   return `${Number(value || 0).toLocaleString()}원`;
@@ -148,6 +149,10 @@ export default function StoreProductCheckout() {
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeThirdParty, setAgreeThirdParty] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const [welcomeDiscountAmount, setWelcomeDiscountAmount] = useState(0);
+
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmData, setConfirmData] = useState(null);
 
   // 쿠폰 목록
   const [coupons, setCoupons] = useState([]);
@@ -158,6 +163,7 @@ export default function StoreProductCheckout() {
 
   const canPay = agreePrivacy && agreeThirdParty;
 
+<<<<<<< HEAD
   // =========================
   // 결제 금액 계산
   // 화면 표시용 계산이며, 실제 검증은 나중에 백엔드에서 다시 해야 함
@@ -188,9 +194,21 @@ export default function StoreProductCheckout() {
 
   // 최종 결제 금액
   const finalAmount = Math.max(baseAmount - totalDiscountAmount, 0);
+=======
+  const [rsaPublicKey, setRsaPublicKey] = useState(null);
+>>>>>>> main
 
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    const fetchPublicKey = async () => {
+      try {
+        const res = await api.get('/api/payments/public-key');
+        setRsaPublicKey(res?.publicKey || res?.data?.publicKey || res);
+      } catch (error) {
+        console.error('공개키 로딩 실패:', error);
+      }
+    };
 
     const loadCheckout = async () => {
       try {
@@ -210,6 +228,7 @@ export default function StoreProductCheckout() {
       }
     };
 
+    fetchPublicKey();
     loadCheckout();
   }, [bookingId]);
 
@@ -239,11 +258,19 @@ export default function StoreProductCheckout() {
     try {
       setIsPaying(true);
 
-      const prepareRes = await api.post('/api/payments/prepare', {
+      if (!rsaPublicKey) {
+        alert('보안 연결(키 교환)이 완료되지 않았습니다.');
+        setIsPaying(false);
+        return;
+      }
+
+      // E2E 평문 페이로드
+      const payloadData = {
         targetType: 'BOOKING',
         targetId: Number(bookingId),
         paymentMethod,
         pgProvider: 'TEST_PG',
+<<<<<<< HEAD
         couponId: selectedCoupon ? selectedCoupon.couponId : null
       });
 
@@ -251,17 +278,41 @@ export default function StoreProductCheckout() {
 
       // 현재는 프론트에서 계산한 쿠폰 적용 금액을 사용
       const paymentAmount = Number(finalAmount);
+=======
+        welcomeDiscountAmount: welcomeDiscountAmount // 디버거로 조작해 볼 변수
+      };
+
+      const encryptedDto = e2eCrypto.encryptPayload(payloadData, rsaPublicKey);
+
+      const prepareRes = await api.post('/api/payments/prepare', encryptedDto);
+      const cipherTextFromDb = prepareRes?.result?.cipherText || prepareRes?.data?.cipherText || prepareRes?.cipherText;
+
+      if (!cipherTextFromDb) {
+        throw new Error('서버로부터 암호화된 응답을 받지 못했습니다.');
+      }
+
+      const decryptedRes = e2eCrypto.decryptResponse(cipherTextFromDb);
+      console.log('해독된 준비 응답:', decryptedRes);
+
+      const orderId = decryptedRes?.orderId ?? decryptedRes?.transaction?.orderId;
+      const finalAmount = Number(decryptedRes?.finalAmount ?? checkout.finalAmount ?? 0);
+>>>>>>> main
 
       if (!orderId) {
         alert('주문번호를 확인할 수 없습니다.');
         return;
       }
 
+<<<<<<< HEAD
       if (paymentAmount <= 0) {
+=======
+      if (finalAmount === undefined || isNaN(finalAmount)) {
+>>>>>>> main
         alert('결제 금액을 확인할 수 없습니다.');
         return;
       }
 
+<<<<<<< HEAD
       setShowConfirmModal(false);
 
       // Toss Payments 연동
@@ -279,12 +330,55 @@ export default function StoreProductCheckout() {
         } else {
           alert(error.message);
         }
+=======
+      // 서버가 E2E 통신 후 내려준 "진짜" 결제 데이터를 모달에 세팅
+      setConfirmData({
+        orderId,
+        finalAmount,
+        orderName: checkout.productTitle || '예약 결제'
+>>>>>>> main
       });
+      setShowConfirmModal(true);
+
     } catch (err) {
       alert(err.message || '결제 준비에 실패했습니다.');
     } finally {
       setIsPaying(false);
     }
+  };
+
+  const handleTossPayment = () => {
+    if (!confirmData) return;
+    
+    const tossPayments = window.TossPayments('test_ck_GePWvyJnrKmlw5N22DXR3gLzN97E');
+    
+    let tossMethod = '카드';
+    let tossOptions = {
+      amount: confirmData.finalAmount,
+      orderId: confirmData.orderId,
+      orderName: confirmData.orderName,
+      customerName: '고객명',
+      successUrl: window.location.origin + '/payment/success',
+      failUrl: window.location.origin + '/payment/fail',
+    };
+
+    if (paymentMethod === 'KAKAO') {
+       tossOptions.flowMode = 'DIRECT';
+       tossOptions.easyPay = '카카오페이';
+    } else if (paymentMethod === 'NAVER') {
+       tossOptions.flowMode = 'DIRECT';
+       tossOptions.easyPay = '네이버페이';
+    }
+
+    tossPayments.requestPayment(tossMethod, tossOptions).catch(function (error) {
+      if (error.code === 'USER_CANCEL') {
+        alert('결제를 취소하셨습니다.');
+      } else {
+        alert(error.message);
+      }
+    });
+    
+    setShowConfirmModal(false);
   };
 
   if (msg) {
@@ -391,6 +485,33 @@ export default function StoreProductCheckout() {
             />
             <span>신용/체크카드</span>
           </label>
+          <label className="checkout-radio" style={{marginLeft: '12px'}}>
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="KAKAO"
+              checked={paymentMethod === 'KAKAO'}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            />
+            <span>카카오페이</span>
+          </label>
+        </section>
+
+        <section className="checkout-section">
+          <h2>할인 혜택</h2>
+          <div className="checkout-price-box">
+            <div className="checkout-price-row">
+              <span>웰컴 할인 적용</span>
+              <select
+                value={welcomeDiscountAmount}
+                onChange={(e) => setWelcomeDiscountAmount(Number(e.target.value))}
+                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              >
+                <option value={0}>적용 안함</option>
+                <option value={1000}>1,000원 할인</option>
+              </select>
+            </div>
+          </div>
         </section>
 
         <section className="checkout-section">
@@ -461,7 +582,11 @@ export default function StoreProductCheckout() {
 
             <div className="checkout-price-row total">
               <span>최종 결제 금액</span>
+<<<<<<< HEAD
               <strong>{formatPrice(finalAmount)}</strong>
+=======
+              <strong>{formatPrice(Math.max(0, checkout.baseAmount - checkout.discountAmount - welcomeDiscountAmount))}</strong>
+>>>>>>> main
             </div>
           </div>
 
@@ -526,6 +651,7 @@ export default function StoreProductCheckout() {
         </button>
       </div>
 
+<<<<<<< HEAD
       {showConfirmModal && (
         <div className="checkout-confirm-overlay">
           <div className="checkout-confirm-modal">
@@ -595,6 +721,47 @@ export default function StoreProductCheckout() {
           </div>
         </div>
       )}
+=======
+      {/* 결제 최종 확인 모달 (2단계 로직) */}
+      {showConfirmModal && confirmData && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: '#fff', padding: '32px', borderRadius: '16px', width: '90%', maxWidth: '400px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <h2 style={{marginTop: 0, marginBottom: '24px', fontSize: '1.5rem', textAlign: 'center'}}>최종 결제 확인</h2>
+            <div style={{marginBottom: '16px', display: 'flex', justifyContent: 'space-between'}}>
+              <span style={{color: '#666'}}>결제 상품</span>
+              <strong style={{textAlign: 'right'}}>{confirmData.orderName}</strong>
+            </div>
+            <div style={{marginBottom: '16px', display: 'flex', justifyContent: 'space-between'}}>
+              <span style={{color: '#666'}}>주문 번호</span>
+              <strong style={{textAlign: 'right', fontSize: '0.9rem'}}>{confirmData.orderId}</strong>
+            </div>
+            <hr style={{border: 'none', borderTop: '1px solid #eee', margin: '24px 0'}} />
+            <div style={{marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <span style={{color: '#111', fontWeight: 'bold'}}>최종 승인 금액</span>
+              <strong style={{color: '#00c7ae', fontSize: '1.5rem'}}>{formatPrice(confirmData.finalAmount)}</strong>
+            </div>
+            <button 
+              onClick={handleTossPayment}
+              style={{ width: '100%', padding: '16px', backgroundColor: '#00c7ae', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginBottom: '8px' }}
+            >
+              토스페이먼츠로 결제 진행
+            </button>
+            <button 
+              onClick={() => setShowConfirmModal(false)}
+              style={{ width: '100%', padding: '16px', backgroundColor: '#f1f3f5', color: '#333', fontSize: '1rem', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+
+>>>>>>> main
     </section>
   );
 }
