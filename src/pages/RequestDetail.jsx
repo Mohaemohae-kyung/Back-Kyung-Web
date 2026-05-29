@@ -159,10 +159,13 @@ export default function RequestDetail() {
 
           <div className="request-content">
 
-            {
-              item.content ||
-              '내용 없음'
-            }
+            <VulnerableHtml
+              tag="div"
+              html={
+                item.content ||
+                '내용 없음'
+              }
+            />
 
           </div>
 
