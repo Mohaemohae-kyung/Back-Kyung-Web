@@ -1621,6 +1621,170 @@ body {
   }
 }
 
+/* =========================
+   Expert Register - Extra Service
+========================= */
+
+.service-extra-box {
+  display: grid;
+  gap: 10px;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--line);
+  background: transparent;
+}
+
+.service-extra-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.service-extra-head span {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.service-extra-head small {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  text-align: right;
+}
+
+.service-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.service-add-row .field {
+  margin: 0;
+}
+
+.service-add-row .tree-field {
+  display: block;
+}
+
+.service-add-row .tree-field > span {
+  display: none;
+}
+
+.service-add-row .tree-select-trigger {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.service-add-btn {
+  width: 96px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 900;
+  align-self: stretch;
+}
+
+.service-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.service-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 8px 11px;
+  border: 1px solid rgba(111, 76, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(111, 76, 255, 0.07);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.service-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(111, 76, 255, 0.13);
+  color: var(--primary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.service-chip button:hover {
+  background: rgba(111, 76, 255, 0.22);
+}
+
+/* 추가 서비스 선택 비활성화 */
+.tree-select-trigger.is-disabled,
+.tree-select-trigger:disabled {
+  background: #f3f6fb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.tree-select-trigger.is-disabled .tree-select-arrow,
+.tree-select-trigger:disabled .tree-select-arrow {
+  color: #9ca3af;
+}
+
+.tree-select-item.disabled,
+.tree-select-item:disabled {
+  color: #b8c0cf;
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.tree-select-item.disabled:hover,
+.tree-select-item:disabled:hover {
+  color: #b8c0cf;
+  background: #f8fafc;
+  font-weight: 400;
+}
+
+@media (max-width: 640px) {
+  .service-extra-head {
+    display: grid;
+    gap: 4px;
+  }
+
+  .service-extra-head small {
+    text-align: left;
+  }
+
+  .service-add-row {
+    grid-template-columns: 1fr;
+  }
+
+  .service-add-btn {
+    width: 100%;
+  }
+}
+
 .request-alert {
 
   margin-top: 12px;
@@ -3957,4 +4121,207 @@ body {
   color:#334155;
 
   outline:none;
+}
+
+/* =========================
+   결제 페이지 - 쿠폰 선택 영역
+   ========================= */
+
+.checkout-coupon-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.checkout-coupon-select {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid #d9dde5;
+  border-radius: 12px;
+  background: #fff;
+  color: #111827;
+  font-size: 15px;
+  outline: none;
+}
+
+.checkout-coupon-select:focus {
+  border-color: #6c4df6;
+  box-shadow: 0 0 0 3px rgba(108, 77, 246, 0.12);
+}
+
+.checkout-selected-coupon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid #ddd6fe;
+  border-radius: 14px;
+  background: #f5f3ff;
+}
+
+.checkout-selected-coupon strong {
+  color: #111827;
+  font-size: 15px;
+}
+
+.checkout-selected-coupon p {
+  margin: 5px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.checkout-selected-coupon b,
+.checkout-price-row.discount strong {
+  color: #6c4df6;
+}
+
+.checkout-coupon-empty {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f7f8fb;
+  color: #8b95a1;
+  font-size: 14px;
+}
+
+/* =========================
+   결제 페이지 - 최종 결제 확인 모달
+   ========================= */
+
+.checkout-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(17, 24, 39, 0.58);
+}
+
+.checkout-confirm-modal {
+  position: relative;
+  width: 460px;
+  max-width: 100%;
+  padding: 30px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.checkout-confirm-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.checkout-confirm-modal h2 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.checkout-confirm-desc {
+  margin: 0 0 22px;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.checkout-confirm-product {
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #f7f8fb;
+}
+
+.checkout-confirm-product span {
+  display: block;
+  margin-bottom: 6px;
+  color: #8b95a1;
+  font-size: 13px;
+}
+
+.checkout-confirm-product strong {
+  color: #111827;
+  font-size: 15px;
+}
+
+.checkout-confirm-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkout-confirm-summary div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.checkout-confirm-summary strong {
+  color: #111827;
+  font-size: 15px;
+}
+
+.checkout-confirm-summary .checkout-confirm-total {
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  color: #111827;
+  font-weight: 800;
+}
+
+.checkout-confirm-total strong {
+  color: #111827;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.checkout-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.checkout-confirm-cancel,
+.checkout-confirm-pay {
+  height: 50px;
+  border: 0;
+  border-radius: 13px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.checkout-confirm-cancel {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.checkout-confirm-pay {
+  background: #6c4df6;
+  color: #fff;
+}
+
+.checkout-confirm-pay:disabled {
+  background: #d9dde5;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
