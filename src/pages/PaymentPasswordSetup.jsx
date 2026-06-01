@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import e2eCrypto from '../utils/e2eCrypto';
 import { api } from '../api/client';
+import { Page, Stat } from '../components/common';
 import VirtualKeyboard from '../components/VirtualKeyboard';
+import { ShieldCheck } from 'lucide-react';
 import './PaymentPasswordSetup.css';
 
 export default function PaymentPasswordSetup() {
@@ -70,15 +72,21 @@ export default function PaymentPasswordSetup() {
   };
 
   return (
-    <div className="password-setup-container">
-      <h2>결제 비밀번호 설정</h2>
-      <p>안전한 결제를 위해 6자리 비밀번호를 설정해주세요.</p>
-      <button 
-        className="setup-button"
-        onClick={() => { setStep(1); setShowKeyboard(true); }}
-      >
-        비밀번호 {step === 1 ? '입력' : '재입력'} 하기
-      </button>
+    <Page title="결제 비밀번호 설정" desc="안전한 결제를 위해 6자리 비밀번호를 설정해주세요.">
+      <div className="mypage-grid">
+        <section className="panel" style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <ShieldCheck size={48} color="#00c7ae" style={{ marginBottom: '16px' }} />
+          <h2>결제 비밀번호 설정</h2>
+          <p className="muted" style={{ marginBottom: '30px' }}>E2E 암호화를 통해 고객님의 비밀번호를 안전하게 보호합니다.</p>
+          <button 
+            className="btn btn-primary"
+            style={{ padding: '14px 32px', fontSize: '1.1rem' }}
+            onClick={() => { setStep(1); setShowKeyboard(true); }}
+          >
+            비밀번호 {step === 1 ? '입력' : '재입력'} 하기
+          </button>
+        </section>
+      </div>
 
       {showKeyboard && (
         <VirtualKeyboard 
@@ -87,6 +95,6 @@ export default function PaymentPasswordSetup() {
           onComplete={handlePinComplete}
         />
       )}
-    </div>
+    </Page>
   );
 }
