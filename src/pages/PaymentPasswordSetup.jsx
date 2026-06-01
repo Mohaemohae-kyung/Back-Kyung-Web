@@ -58,7 +58,7 @@ export default function PaymentPasswordSetup() {
 
         const encryptedPayload = e2eCrypto.encryptPayload(payload, rsaPublicKey);
         
-        await api.post('http://100.104.59.126:4000/api/payments/password/setup', encryptedPayload);
+        await api.post('/api/payments/password/setup', encryptedPayload);
         
         alert("결제 비밀번호가 성공적으로 설정되었습니다.");
         navigate(-1); // 이전 페이지로 돌아가기
