@@ -137,7 +137,15 @@ export default function StoreProductCheckout() {
     const fetchPublicKey = async () => {
       try {
         const res = await api.get(`/api/payments/public-key?t=${Date.now()}`);
-        setRsaPublicKey(res?.publicKey || res?.data?.publicKey || res);
+        let pubKey = res?.publicKey || res?.data?.publicKey || res;
+        if (typeof pubKey === 'object' && pubKey.publicKey) {
+          pubKey = pubKey.publicKey;
+        }
+        if (typeof pubKey === 'string' && pubKey.includes('BEGIN PUBLIC KEY')) {
+          setRsaPublicKey(pubKey);
+        } else {
+          throw new Error("Invalid public key format");
+        }
       } catch (error) {
         console.error('공개키 로딩 실패:', error);
       }

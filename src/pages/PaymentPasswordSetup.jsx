@@ -12,17 +12,35 @@ export default function PaymentPasswordSetup() {
   const [step, setStep] = useState(1); // 1: set, 2: confirm
   const [firstPin, setFirstPin] = useState("");
   const [rsaPublicKey, setRsaPublicKey] = useState(null);
+  const [loadingKey, setLoadingKey] = useState(true);
+  const [keyError, setKeyError] = useState(false);
   const navigate = useNavigate();
 
-  React.useEffect(() => {
-    const fetchPublicKey = async () => {
-      try {
-        const res = await api.get(`/api/payments/public-key?t=${Date.now()}`);
-        setRsaPublicKey(res?.publicKey || res?.data?.publicKey || res);
-      } catch (error) {
-        console.error('공개키 로딩 실패:', error);
+  const fetchPublicKey = async () => {
+    setLoadingKey(true);
+    setKeyError(false);
+    try {
+      const res = await api.get(`/api/payments/public-key?t=${Date.now()}`);
+      
+      let pubKey = res?.publicKey || res?.data?.publicKey || res;
+      if (typeof pubKey === 'object' && pubKey.publicKey) {
+        pubKey = pubKey.publicKey;
       }
-    };
+      
+      if (typeof pubKey === 'string' && pubKey.includes('BEGIN PUBLIC KEY')) {
+        setRsaPublicKey(pubKey);
+      } else {
+        throw new Error("Invalid public key format received");
+      }
+    } catch (error) {
+      console.error('공개키 로딩 실패:', error);
+      setKeyError(true);
+    } finally {
+      setLoadingKey(false);
+    }
+  };
+
+  React.useEffect(() => {
     fetchPublicKey();
   }, []);
 
@@ -78,13 +96,25 @@ export default function PaymentPasswordSetup() {
           <ShieldCheck size={48} color="#00c7ae" style={{ marginBottom: '16px' }} />
           <h2>결제 비밀번호 설정</h2>
           <p className="muted" style={{ marginBottom: '30px' }}>E2E 암호화를 통해 고객님의 비밀번호를 안전하게 보호합니다.</p>
-          <button 
-            className="btn btn-primary"
-            style={{ padding: '14px 32px', fontSize: '1.1rem' }}
-            onClick={() => { setStep(1); setShowKeyboard(true); }}
-          >
-            비밀번호 {step === 1 ? '입력' : '재입력'} 하기
-          </button>
+          
+          {loadingKey ? (
+            <p style={{ color: '#666' }}>보안 연결(키 교환)을 설정하는 중입니다...</p>
+          ) : keyError ? (
+            <div>
+              <p style={{ color: 'red', marginBottom: '12px' }}>보안 연결(키 교환)에 실패했습니다.</p>
+              <button className="btn btn-outline" onClick={fetchPublicKey}>
+                다시 시도
+              </button>
+            </div>
+          ) : (
+            <button 
+              className="btn btn-primary"
+              style={{ padding: '14px 32px', fontSize: '1.1rem' }}
+              onClick={() => { setStep(1); setShowKeyboard(true); }}
+            >
+              비밀번호 {step === 1 ? '입력' : '재입력'} 하기
+            </button>
+          )}
         </section>
       </div>
 
