@@ -37,6 +37,7 @@ import MockPgPayment from './pages/MockPgPayment';
 import BookingDetail from './pages/BookingDetail';
 import AIChatbot from './components/AIChatbot';
 import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentPasswordSetup from './pages/PaymentPasswordSetup';
 
 export default function App() {
 
