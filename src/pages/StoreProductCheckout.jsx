@@ -149,13 +149,13 @@ export default function StoreProductCheckout() {
         const userResult = userRes.result || userRes.data?.result || userRes.data || {};
         setHasPaymentPassword(!!userResult.hasPaymentPassword);
 
-        const res = await api.get(`/api/bookings/${bookingId}/checkout`);
+        const res = await api.get(`/api/checkout/bookings/${bookingId}`);
         const data = res.result || res.data?.result || res.data;
         setCheckout(data);
         
         try {
           const couponRes = await api.get(
-            `/api/coupons/my/applicable?targetType=BOOKING&targetId=${bookingId}`
+            `/api/coupons/usable?targetType=BOOKING&targetId=${bookingId}`
           );
 
           setCoupons(couponRes.result || []);
