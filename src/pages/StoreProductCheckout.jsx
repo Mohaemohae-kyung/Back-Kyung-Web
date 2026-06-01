@@ -136,7 +136,7 @@ export default function StoreProductCheckout() {
 
     const fetchPublicKey = async () => {
       try {
-        const res = await api.get('/api/payments/public-key');
+        const res = await api.get(`/api/payments/public-key?t=${Date.now()}`);
         setRsaPublicKey(res?.publicKey || res?.data?.publicKey || res);
       } catch (error) {
         console.error('공개키 로딩 실패:', error);
