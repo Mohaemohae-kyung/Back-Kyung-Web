@@ -43,7 +43,6 @@ export default function PaymentPage() {
   const [payment, setPayment] = useState(null);
 
   const [selectedMethod, setSelectedMethod] = useState('CARD');
-  const [welcomeDiscountAmount, setWelcomeDiscountAmount] = useState(0);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
@@ -166,7 +165,6 @@ export default function PaymentPage() {
       // 아래의 welcomeDiscountAmount 값을 99900 등으로 변조하여 암호화 로직을 태웁니다.
       
       const selectedCoupon = coupons.find(c => String(c.userCouponId) === String(selectedCouponId));
-      const isWelcomeCouponSelected = selectedCoupon && Number(selectedCoupon.userCouponId) === -1;
 
       const payloadData = {
         targetType,
@@ -175,11 +173,7 @@ export default function PaymentPage() {
         pgProvider: 'TEST_PG',
         paymentPin, // E2E 암호화될 결제 비밀번호
         
-        welcomeDiscountAmount: isWelcomeCouponSelected 
-          ? calculateCouponDiscount(selectedCoupon, Number(payment.totalAmount || payment.paymentAmount || payment.amount || 0))
-          : welcomeDiscountAmount, // 디버거로 조작해 볼 변수!
-          
-        userCouponId: !isWelcomeCouponSelected && selectedCoupon
+        userCouponId: selectedCoupon
           ? selectedCoupon.userCouponId
           : null
       };
@@ -278,7 +272,7 @@ export default function PaymentPage() {
     couponDiscountAmount = calculateCouponDiscount(selectedCoupon, baseAmount);
   }
 
-  const discountAmount = couponDiscountAmount + Number(welcomeDiscountAmount);
+  const discountAmount = couponDiscountAmount;
   const finalAmount = Math.max(0, baseAmount - discountAmount);
 
   return (
@@ -338,18 +332,6 @@ export default function PaymentPage() {
                 </div>
               </div>
             )}
-          </div>
-
-          <div className="payment-row">
-            <span>웰컴 할인 적용 (모의해킹용)</span>
-            <select
-              value={welcomeDiscountAmount}
-              onChange={(e) => setWelcomeDiscountAmount(Number(e.target.value))}
-              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
-            >
-              <option value={0}>적용 안함</option>
-              <option value={1000}>1,000원 할인</option>
-            </select>
           </div>
         </div>
 
