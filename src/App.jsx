@@ -183,6 +183,18 @@ export default function App() {
               element={<MyPage />}
             />
 
+            {/* 결제 비밀번호 설정 */}
+            <Route
+              path="/mypage/payment-password"
+              element={
+                user ? (
+                  <PaymentPasswordSetup />
+                ) : (
+                  <Navigate to="/login" />
+                )
+              }
+            />
+
             {/* 고수 등록 */}
             <Route
               path="/expert/register"
