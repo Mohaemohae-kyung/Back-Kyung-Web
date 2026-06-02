@@ -57,10 +57,14 @@ export default function MyPage() {
     name: '',
     nickname: '',
     phone: '',
+    detailAddress: '',
     profileImageUrl: ''
   });
   const [withdrawPassword, setWithdrawPassword] = useState('');
   const [msg, setMsg] = useState('');
+
+  const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
+  const [profileMsg, setProfileMsg] = useState('');
 
   const [payments, setPayments] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -112,6 +116,7 @@ export default function MyPage() {
           name: data.name || '',
           nickname: data.nickname || '',
           phone: data.phone || '',
+          detailAddress: data.detailAddress || '',
           profileImageUrl: data.profileImageUrl || '',
         });
         updateStoredUser(data);
@@ -157,15 +162,37 @@ export default function MyPage() {
 
   const updateProfile = async e => {
     e.preventDefault();
+
     setMsg('');
+    setProfileMsg('');
+
+    const profilePayload = {
+      name: form.name,
+      nickname: form.nickname,
+      phone: form.phone,
+      detailAddress: form.detailAddress,
+      profileImageUrl: form.profileImageUrl
+    };
+
     try {
-      const res = await api.patch('/api/users/me', form);
+      const res = await api.patch('/api/users/me', profilePayload);
       const data = res?.result || res?.data?.result || res;
+
       setUserInfo(data);
       updateStoredUser(data);
-      setMsg('프로필이 수정되었습니다.');
+
+      setForm({
+        name: data.name || '',
+        nickname: data.nickname || '',
+        phone: data.phone || '',
+        detailAddress: data.detailAddress || '',
+        profileImageUrl: data.profileImageUrl || ''
+      });
+
+      setProfileMsg('프로필이 수정되었습니다.');
+      setIsProfileEditOpen(false);
     } catch (err) {
-      setMsg(err.message);
+      setProfileMsg(err.message || '프로필 수정에 실패했습니다.');
     }
   };
 
@@ -285,43 +312,6 @@ export default function MyPage() {
       )}
 
       <div className="mypage-sections">
-        
-        {userInfo.role !== 'EXPERT' && (
-          <section className="panel">
-            <h2><Ticket size={20} /> 내 쿠폰</h2>
-            {userInfo.welcomeCouponAvailable === 'Y' && (
-              <div className="welcome-coupon-banner">
-                <p>신규 가입 웰컴 쿠폰을 발급받을 수 있습니다.</p>
-                <button type="button" className="btn btn-primary" onClick={downloadWelcomeCoupon}>
-                  웰컴 쿠폰 발급받기
-                </button>
-              </div>
-            )}
-            
-            {coupons.length === 0 ? (
-              <p className="muted">보유 중인 쿠폰이 없습니다.</p>
-            ) : (
-              <div className="coupon-list">
-                {coupons.map(coupon => (
-                  <div key={coupon.userCouponId || coupon.id} className="card payment-history-card">
-                    <div>
-                      <h3>{coupon.coupon?.name || coupon.name || '할인 쿠폰'}</h3>
-                      <p className="muted">
-                        사용 기한: {coupon.expiredAt ? formatBookingDateTime(coupon.expiredAt) : '제한 없음'}
-                      </p>
-                    </div>
-                    <div className="payment-history-right">
-                      <b>
-                        {Number(coupon.coupon?.discountAmount || coupon.discountAmount || 0).toLocaleString()}원
-                      </b>
-                      <span className="payment-status">{coupon.status}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
 
         <section className="panel mypage-booking-section">
           <h2><CalendarDays size={20} /> 예약 내역</h2>
@@ -369,15 +359,88 @@ export default function MyPage() {
           </section>
         )}
 
-        <section className="panel">
-          <h2><UserRound size={20} /> 내 프로필 수정</h2>
-          <form className="form" onSubmit={updateProfile}>
-            <Input label="이름" value={form.name} onChange={v => setForm({ ...form, name: v })} />
-            <Input label="닉네임" value={form.nickname} onChange={v => setForm({ ...form, nickname: v })} />
-            <Input label="전화번호" value={form.phone} onChange={v => setForm({ ...form, phone: v })} />
-            <Input label="프로필 이미지 URL" value={form.profileImageUrl} onChange={v => setForm({ ...form, profileImageUrl: v })} />
-            <button className="btn btn-primary">프로필 저장</button>
-          </form>
+        <section className="panel profile-edit-panel">
+          <div className="profile-edit-head">
+            <div>
+              <h2><UserRound size={20} /> 내 프로필</h2>
+              <p className="muted">기본 회원 정보를 확인하고 수정할 수 있습니다.</p>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setProfileMsg('');
+                setIsProfileEditOpen(prev => !prev);
+              }}
+            >
+              {isProfileEditOpen ? '닫기' : '수정하기'}
+            </button>
+          </div>
+
+          {profileMsg && (
+            <div className="profile-save-message">
+              {profileMsg}
+            </div>
+          )}
+
+          {!isProfileEditOpen ? (
+            <div className="profile-summary-list">
+              <div className="profile-summary-row">
+                <span>이름</span>
+                <strong>{userInfo.name || '-'}</strong>
+              </div>
+
+              <div className="profile-summary-row">
+                <span>닉네임</span>
+                <strong>{userInfo.nickname || '-'}</strong>
+              </div>
+
+              <div className="profile-summary-row">
+                <span>전화번호</span>
+                <strong>{userInfo.phone || '-'}</strong>
+              </div>
+
+              <div className="profile-summary-row">
+                <span>상세주소</span>
+                <strong>{userInfo.detailAddress || '-'}</strong>
+              </div>
+            </div>
+          ) : (
+            <form className="form" onSubmit={updateProfile}>
+              <Input
+                label="이름"
+                value={form.name}
+                onChange={v => setForm({ ...form, name: v })}
+              />
+
+              <Input
+                label="닉네임"
+                value={form.nickname}
+                onChange={v => setForm({ ...form, nickname: v })}
+              />
+
+              <Input
+                label="전화번호"
+                value={form.phone}
+                onChange={v => setForm({ ...form, phone: v })}
+              />
+
+              <Input
+                label="상세주소"
+                value={form.detailAddress}
+                onChange={v => setForm({ ...form, detailAddress: v })}
+              />
+
+              <Input
+                label="프로필 이미지 URL"
+                value={form.profileImageUrl}
+                onChange={v => setForm({ ...form, profileImageUrl: v })}
+              />
+
+              <button className="btn btn-primary">프로필 저장</button>
+            </form>
+          )}
         </section>
 
         <section className="panel">
