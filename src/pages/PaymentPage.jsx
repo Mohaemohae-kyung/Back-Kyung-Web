@@ -236,14 +236,6 @@ export default function PaymentPage() {
       failUrl: window.location.origin + '/payment/fail',
     };
 
-    if (selectedMethod === 'KAKAO') {
-       tossOptions.flowMode = 'DIRECT';
-       tossOptions.easyPay = '카카오페이';
-    } else if (selectedMethod === 'NAVER') {
-       tossOptions.flowMode = 'DIRECT';
-       tossOptions.easyPay = '네이버페이';
-    }
-
     tossPayments.requestPayment(tossMethod, tossOptions).catch(function (error) {
       if (error.code === 'USER_CANCEL') {
         alert('결제를 취소하셨습니다.');
@@ -338,29 +330,32 @@ export default function PaymentPage() {
         {/* 결제수단 */}
         <div className="payment-card">
           <h3 className="payment-title">결제수단</h3>
-          <div className="payment-method-list">
-            <button
-              type="button"
-              className={`payment-method-btn ${selectedMethod === 'CARD' ? 'active' : ''}`}
-              onClick={() => setSelectedMethod('CARD')}
-            >
-              신용/체크카드
-            </button>
-            <button
-              type="button"
-              className={`payment-method-btn ${selectedMethod === 'KAKAO' ? 'active' : ''}`}
-              onClick={() => setSelectedMethod('KAKAO')}
-            >
-              카카오페이
-            </button>
-            <button
-              type="button"
-              className={`payment-method-btn ${selectedMethod === 'NAVER' ? 'active' : ''}`}
-              onClick={() => setSelectedMethod('NAVER')}
-            >
-              네이버페이
-            </button>
-          </div>
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              color: '#111',
+              cursor: 'default'
+            }}
+          >
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="CARD"
+              checked
+              readOnly
+              style={{
+                width: '16px',
+                height: '16px',
+                accentColor: '#6C4DFF'
+              }}
+            />
+            신용/체크카드
+          </label>
         </div>
 
         {/* 결제금액 */}
@@ -375,7 +370,6 @@ export default function PaymentPage() {
               <span>할인 금액</span>
               <b>-{discountAmount.toLocaleString()}원</b>
             </div>
-            <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '12px 0' }} />
             <div className="payment-row total">
               <span>최종 결제 금액</span>
               <strong style={{ fontSize: '1.2rem', color: '#111' }}>{finalAmount.toLocaleString()}원</strong>
@@ -388,7 +382,18 @@ export default function PaymentPage() {
           className="payment-submit-btn"
           onClick={handlePaymentClick}
           disabled={loading || isPaying}
-          style={{ width: '100%', padding: '16px', backgroundColor: '#00c7ae', color: '#fff', fontSize: '1rem', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '16px' }}
+          style={{
+            width: '100%',
+            padding: '16px',
+            backgroundColor: '#6C4DFF',
+            color: '#fff',
+            fontSize: '1rem',
+            fontWeight: 'bold',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            marginTop: '16px'
+          }}
         >
           {isPaying ? '결제 진행중...' : '결제하기'}
         </button>
