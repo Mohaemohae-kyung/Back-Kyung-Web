@@ -7,7 +7,8 @@ import {
   PenLine,
   UserRound,
   UserX,
-  Ticket
+  Ticket,
+  ShieldCheck
 } from 'lucide-react';
 
 import {
@@ -377,6 +378,19 @@ export default function MyPage() {
             <Input label="프로필 이미지 URL" value={form.profileImageUrl} onChange={v => setForm({ ...form, profileImageUrl: v })} />
             <button className="btn btn-primary">프로필 저장</button>
           </form>
+        </section>
+
+        <section className="panel">
+          <h2><ShieldCheck size={20} /> 보안 설정</h2>
+          <div className="card-row" style={{ alignItems: 'center' }}>
+            <div>
+              <h3>결제 비밀번호</h3>
+              <p className="muted">안전한 결제를 위해 6자리 E2E 암호화 결제 비밀번호를 설정합니다.</p>
+            </div>
+            <Link className="btn btn-primary" to="/mypage/payment-password">
+              비밀번호 설정
+            </Link>
+          </div>
         </section>
 
         <section className="panel danger-panel">

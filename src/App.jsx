@@ -37,6 +37,7 @@ import MockPgPayment from './pages/MockPgPayment';
 import BookingDetail from './pages/BookingDetail';
 import AIChatbot from './components/AIChatbot';
 import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentPasswordSetup from './pages/PaymentPasswordSetup';
 
 export default function App() {
 
@@ -180,6 +181,18 @@ export default function App() {
             <Route
               path="/mypage"
               element={<MyPage />}
+            />
+
+            {/* 결제 비밀번호 설정 */}
+            <Route
+              path="/mypage/payment-password"
+              element={
+                user ? (
+                  <PaymentPasswordSetup />
+                ) : (
+                  <Navigate to="/login" />
+                )
+              }
             />
 
             {/* 고수 등록 */}

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { api } from '../api/client';
 import e2eCrypto from '../utils/e2eCrypto';
+import VirtualKeyboard from '../components/VirtualKeyboard';
 
 function formatPrice(value) {
   return `${Number(value || 0).toLocaleString()}원`;
@@ -93,6 +94,9 @@ export default function StoreProductCheckout() {
   const [welcomeDiscountAmount] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
+  
+  const [hasPaymentPassword, setHasPaymentPassword] = useState(false);
+  const [showKeyboard, setShowKeyboard] = useState(false);
 
   // 쿠폰 목록
   const [coupons, setCoupons] = useState([]);
@@ -132,18 +136,31 @@ export default function StoreProductCheckout() {
 
     const fetchPublicKey = async () => {
       try {
-        const res = await api.get('/api/payments/public-key');
-        setRsaPublicKey(res?.publicKey || res?.data?.publicKey || res);
+        const res = await api.get(`/api/payments/public-key?t=${Date.now()}`);
+        let pubKey = res?.publicKey || res?.data?.publicKey || res;
+        if (typeof pubKey === 'object' && pubKey.publicKey) {
+          pubKey = pubKey.publicKey;
+        }
+        if (typeof pubKey === 'string' && pubKey.includes('BEGIN PUBLIC KEY')) {
+          setRsaPublicKey(pubKey);
+        } else {
+          throw new Error("Invalid public key format");
+        }
       } catch (error) {
         console.error('공개키 로딩 실패:', error);
       }
     };
 
-    const loadCheckout = async () => {
+    const loadUserAndCheckout = async () => {
       try {
-        const res = await api.get(`/api/checkout/bookings/${bookingId}`);
-        setCheckout(res.result);
+        const userRes = await api.get('/api/users/me');
+        const userResult = userRes.result || userRes.data?.result || userRes.data || {};
+        setHasPaymentPassword(!!userResult.hasPaymentPassword);
 
+        const res = await api.get(`/api/checkout/bookings/${bookingId}`);
+        const data = res.result || res.data?.result || res.data;
+        setCheckout(data);
+        
         try {
           const couponRes = await api.get(
             `/api/coupons/usable?targetType=BOOKING&targetId=${bookingId}`
@@ -160,7 +177,7 @@ export default function StoreProductCheckout() {
     };
 
     fetchPublicKey();
-    loadCheckout();
+    loadUserAndCheckout();
   }, [bookingId]);
 
   const handlePaymentClick = async () => {
@@ -171,13 +188,25 @@ export default function StoreProductCheckout() {
 
     if (isPaying) return;
 
+    if (!hasPaymentPassword) {
+      alert('결제 비밀번호 설정이 필요합니다.');
+      navigate('/mypage/payment-password');
+      return;
+    }
+
+    if (!rsaPublicKey) {
+      alert('보안 연결(키 교환)이 완료되지 않았습니다.');
+      return;
+    }
+
+    setShowKeyboard(true);
+  };
+
+  const handlePinComplete = async (paymentPin) => {
+    setShowKeyboard(false);
+    
     try {
       setIsPaying(true);
-
-      if (!rsaPublicKey) {
-        alert('보안 연결(키 교환)이 완료되지 않았습니다.');
-        return;
-      }
 
       const isWelcomeCouponSelected =
         selectedCoupon && Number(selectedCoupon.userCouponId) === -1;
@@ -188,6 +217,7 @@ export default function StoreProductCheckout() {
         targetId: Number(bookingId),
         paymentMethod,
         pgProvider: 'TEST_PG',
+        paymentPin, // 추가된 비밀번호
         // 웰컴 쿠폰은 프론트 할인 금액을 그대로 전달
         welcomeDiscountAmount: isWelcomeCouponSelected
           ? couponDiscountAmount
@@ -233,7 +263,9 @@ export default function StoreProductCheckout() {
 
       setShowConfirmModal(true);
     } catch (err) {
-      alert(err.message || '결제 준비에 실패했습니다.');
+      // 5회 실패 에러 등에 대한 처리
+      const errorMessage = err.response?.data?.message || err.message || '결제 준비에 실패했습니다.';
+      alert(errorMessage);
     } finally {
       setIsPaying(false);
     }
@@ -503,6 +535,14 @@ export default function StoreProductCheckout() {
           상품 상세로 돌아가기
         </button>
       </div>
+
+      {/* 가상 키보드 모달 */}
+      {showKeyboard && (
+        <VirtualKeyboard 
+          onClose={() => setShowKeyboard(false)}
+          onComplete={handlePinComplete}
+        />
+      )}
 
       {/* 결제 최종 확인 모달 (2단계 로직) */}
       {showConfirmModal && confirmData && (
