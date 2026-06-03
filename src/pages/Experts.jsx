@@ -351,10 +351,10 @@ export default function Experts() {
 
                 <div className="avatar">
 
-                  {expert.profileImageUrl ? (
+                  {expert.userProfileImageUrl ? (
 
                     <img
-                      src={expert.profileImageUrl}
+                      src={expert.userProfileImageUrl}
                       alt="프로필"
                       className="avatar-image"
                     />
