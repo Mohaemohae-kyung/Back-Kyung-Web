@@ -56,7 +56,10 @@ export function Input({
   step,
   required = false,
   error,
-  inputRef
+  helperText,
+  inputRef,
+  maxLength,
+  autoComplete
 }) {
   return (
     <label className={`field ${error ? 'field-error' : ''}`}>
@@ -69,10 +72,17 @@ export function Input({
         step={step}
         required={required}
         value={value}
+        maxLength={maxLength}
+        autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || label}
       />
-      {error && <small className="field-error-text">{error}</small>}
+
+      {error ? (
+        <small className="field-error-text">{error}</small>
+      ) : (
+        helperText && <small className="field-helper-text">{helperText}</small>
+      )}
     </label>
   );
 }

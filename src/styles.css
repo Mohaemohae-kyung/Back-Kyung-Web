@@ -713,11 +713,12 @@ body {
   color: var(--primary);
 }
 
-.field-error input,
-.field-error textarea,
-.field-error select {
-  border: 1.5px solid #ef4444;
-  background-color: #fff7f7;
+.field-error input:focus,
+.field-error textarea:focus,
+.field-error select:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+  outline: none;
 }
 
 .field-error-text {
@@ -727,6 +728,21 @@ body {
 }
 
 .field-error span {
+  color: #ef4444;
+}
+
+.field-error .rrn-input {
+  border: 1.5px solid #ef4444;
+  background-color: #fff7f7;
+}
+
+.field-helper-text {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field-error .rrn-dash {
   color: #ef4444;
 }
 
