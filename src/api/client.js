@@ -341,7 +341,7 @@ async function uploadExpertProfileImage(file) {
 
       data?.message ||
 
-      `怨좎닔 ?꾨줈???대?吏 ?낅줈???ㅽ뙣: ${res.status}`
+      `고수 프로필 이미지 업로드 실패: ${res.status}`
     );
 
     error.response = {
