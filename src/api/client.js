@@ -308,42 +308,49 @@ async function request(
     }
   );
 
-  // =========================
-  // 401 발생 시 재발급
-  // =========================
+// =========================
+// 401 발생 시 재발급
+// 단, 로그인 실패 401은 재발급/리다이렉트 대상이 아님
+// =========================
 
-  if (res.status === 401) {
+const isLoginRequest =
+  path === '/api/auth/login';
+
+if (
+  res.status === 401 &&
+  !isLoginRequest
+) {
+
+  console.log(
+    '401 발생 → 토큰 재발급 시도'
+  );
+
+  const success =
+    await tryReissueToken();
+
+  if (success) {
+
+    headers =
+      createAuthHeaders(true);
 
     console.log(
-      '401 발생 → 토큰 재발급 시도'
+      '원래 요청 재시도'
     );
 
-    const success =
-      await tryReissueToken();
+    res = await fetch(
 
-    if (success) {
+      `${BASE_URL}${path}`,
 
-      headers =
-        createAuthHeaders(true);
-
-      console.log(
-        '원래 요청 재시도'
-      );
-
-      res = await fetch(
-
-        `${BASE_URL}${path}`,
-
-        {
-          method,
-          headers,
-          body: body
-            ? JSON.stringify(body)
-            : undefined,
-        }
-      );
-    }
+      {
+        method,
+        headers,
+        body: body
+          ? JSON.stringify(body)
+          : undefined,
+      }
+    );
   }
+}
 
   let data = null;
 
