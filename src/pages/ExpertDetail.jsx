@@ -166,10 +166,10 @@ export default function ExpertDetail() {
 
             <div className="avatar large">
 
-              {expert.profileImageUrl ? (
+              {expert.userProfileImageUrl ? (
 
                 <img
-                  src={expert.profileImageUrl}
+                  src={expert.userProfileImageUrl}
                   alt="프로필"
                   className="profile-image"
                 />
@@ -213,6 +213,19 @@ export default function ExpertDetail() {
 
             {/* 소개 */}
             <div className="intro-box">
+
+              {expert.expertProfileImageUrl && (
+
+                <div className="expert-intro-image">
+
+                  <img
+                    src={expert.expertProfileImageUrl}
+                    alt="고수 프로필 이미지"
+                  />
+
+                </div>
+
+              )}
 
               <h3>고수 소개</h3>
 

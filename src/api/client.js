@@ -281,6 +281,80 @@ async function uploadFile(domain, file) {
   return data || { result: null };
 }
 
+async function uploadExpertProfileImage(file) {
+
+  const formData = new FormData();
+
+  formData.append('file', file);
+
+  const headers =
+    createAuthHeaders(false);
+
+  let res = await fetch(
+
+    `${BASE_URL}/api/experts/profile/image`,
+
+    {
+      method: 'POST',
+      headers,
+      body: formData,
+    }
+  );
+
+  if (res.status === 401) {
+
+    const success =
+      await tryReissueToken();
+
+    if (success) {
+
+      const retryHeaders =
+        createAuthHeaders(false);
+
+      res = await fetch(
+
+        `${BASE_URL}/api/experts/profile/image`,
+
+        {
+          method: 'POST',
+          headers: retryHeaders,
+          body: formData,
+        }
+      );
+    }
+  }
+
+  let data = null;
+
+  try {
+
+    data = await res.json();
+
+  } catch {}
+
+  if (
+    !res.ok ||
+    data?.isSuccess === false
+  ) {
+
+    const error = new Error(
+
+      data?.message ||
+
+      `怨좎닔 ?꾨줈???대?吏 ?낅줈???ㅽ뙣: ${res.status}`
+    );
+
+    error.response = {
+      status: res.status,
+      data
+    };
+
+    throw error;
+  }
+
+  return data || { result: null };
+}
+
 async function request(
   method,
   path,
@@ -407,4 +481,6 @@ export const api = {
     request('DELETE', path, body),
 
   uploadFile,
+
+  uploadExpertProfileImage,
 };

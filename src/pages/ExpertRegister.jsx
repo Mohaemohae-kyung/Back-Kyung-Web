@@ -85,6 +85,16 @@ export default function ExpertRegister() {
 
   const [subServiceDraft, setSubServiceDraft] = useState('');
 
+  const [expertProfileImageFile, setExpertProfileImageFile] = useState(null);
+
+  const [expertProfileImagePreviewUrl, setExpertProfileImagePreviewUrl] = useState('');
+
+  const [existingExpertProfileImageUrl, setExistingExpertProfileImageUrl] = useState('');
+
+  const [imageUploadResult, setImageUploadResult] = useState(null);
+
+  const [imageUploading, setImageUploading] = useState(false);
+
   const [done, setDone] = useState(false);
 
   const [msg, setMsg] = useState('');
@@ -101,6 +111,18 @@ export default function ExpertRegister() {
   const mainCategoryRef = useRef(null);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!expertProfileImageFile) {
+      setExpertProfileImagePreviewUrl(existingExpertProfileImageUrl || '');
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(expertProfileImageFile);
+    setExpertProfileImagePreviewUrl(nextPreviewUrl);
+
+    return () => URL.revokeObjectURL(nextPreviewUrl);
+  }, [expertProfileImageFile, existingExpertProfileImageUrl]);
 
   useEffect(() => {
     if (!isEditMode) return;
@@ -166,6 +188,9 @@ export default function ExpertRegister() {
             detail.externalPortfolioUrl ||
             extractExternalPortfolioUrl(detail.portfolioWebViewUrl)
         });
+
+        setExistingExpertProfileImageUrl(detail.expertProfileImageUrl || '');
+        setImageUploadResult(null);
 
       } catch (err) {
         if (!ignore) {
@@ -395,6 +420,12 @@ export default function ExpertRegister() {
     }));
   };
 
+  const handleExpertProfileImageChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setExpertProfileImageFile(file);
+    setImageUploadResult(null);
+  };
+
   const submit = async (e) => {
 
     e.preventDefault();
@@ -450,6 +481,8 @@ export default function ExpertRegister() {
       profilePayload
     );
 
+    setImageUploading(false);
+
     try {
 
   // =========================
@@ -493,6 +526,22 @@ export default function ExpertRegister() {
     }
   }
 
+  if (expertProfileImageFile) {
+
+    setImageUploading(true);
+
+    const uploadRes =
+      await api.uploadExpertProfileImage(expertProfileImageFile);
+
+    const uploadResult =
+      getResult(uploadRes);
+
+    setImageUploadResult(uploadResult);
+    setExistingExpertProfileImageUrl(uploadResult?.expertProfileImageUrl || '');
+    setExpertProfileImageFile(null);
+    setImageUploading(false);
+  }
+
   setDone(true);
 
   setMsg(
@@ -504,6 +553,8 @@ export default function ExpertRegister() {
   navigate('/experts');
 
 } catch (err) {
+
+      setImageUploading(false);
 
       console.error(
         '고수 프로필 저장 실패',
@@ -735,6 +786,61 @@ export default function ExpertRegister() {
               }}
               placeholder="외부 포트폴리오 주소를 입력해주세요. (이미지 등)"
             />
+
+            <label className="field expert-profile-image-field">
+
+              <span>고수 프로필 이미지</span>
+
+              <div className="expert-profile-image-uploader">
+
+                <div className="expert-profile-image-preview">
+
+                  {expertProfileImagePreviewUrl ? (
+
+                    <img
+                      src={expertProfileImagePreviewUrl}
+                      alt="고수 프로필 이미지 미리보기"
+                    />
+
+                  ) : (
+
+                    <span>이미지 미리보기</span>
+
+                  )}
+
+                </div>
+
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                  onChange={handleExpertProfileImageChange}
+                />
+
+                <small className="field-helper-text">
+                  JPG, PNG, GIF, WebP, SVG 파일을 업로드할 수 있습니다.
+                </small>
+
+                {expertProfileImageFile && (
+                  <small className="field-helper-text">
+                    선택됨: {expertProfileImageFile.name}
+                  </small>
+                )}
+
+                {imageUploading && (
+                  <small className="field-helper-text">
+                    고수 프로필 이미지를 업로드하는 중입니다.
+                  </small>
+                )}
+
+                {imageUploadResult?.expertProfileImageUrl && (
+                  <small className="field-helper-text">
+                    업로드 완료: {imageUploadResult.expertProfileImageUrl}
+                  </small>
+                )}
+
+              </div>
+
+            </label>
 
             {msg && (
               <p className="error-text">
