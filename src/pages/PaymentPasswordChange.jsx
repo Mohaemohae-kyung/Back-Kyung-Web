@@ -48,8 +48,6 @@ export default function PaymentPasswordChange() {
 
       if (result && result.userId) {
         setCurrentUserId(result.userId);
-        
-        // 데이터 로딩 완료 즉시 키보드 활성화 (버튼 클릭 생략)
         setShowKeyboard(true);
       } else {
         throw new Error("응답 데이터에서 사용자 정보를 찾을 수 없습니다.");
@@ -85,7 +83,6 @@ export default function PaymentPasswordChange() {
           currentPin: pin
         };
 
-        // 현재 비밀번호 실시간 단독 검증
         const encryptedPayload = e2eCrypto.encryptPayload(payload, rsaPublicKey);
         await api.post('/api/payments/password/verify', encryptedPayload);
 
@@ -102,13 +99,7 @@ export default function PaymentPasswordChange() {
         setTimeout(() => setShowKeyboard(true), 300);
       }
     } else if (step === 2) {
-      if (currentPin === pin) {
-        alert("새 비밀번호는 기존 비밀번호와 달라야 합니다.");
-        setStep(2);
-        setShowKeyboard(false);
-        setTimeout(() => setShowKeyboard(true), 300);
-        return;
-      }
+      // 기존 비밀번호와 동일한 값 허용
       setNewPin(pin);
       setStep(3);
       setShowKeyboard(false);
