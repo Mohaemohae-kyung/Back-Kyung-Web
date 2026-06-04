@@ -44,11 +44,13 @@ export default function PaymentPasswordChange() {
 
     try {
       const userInfoRes = await api.get('/api/users/me');
-      const responseData = userInfoRes.data ? userInfoRes.data : userInfoRes;
-      const result = responseData.result;
+      const result = userInfoRes?.result || userInfoRes?.data?.result || userInfoRes;
 
-      if (result) {
+      if (result && result.userId) {
         setCurrentUserId(result.userId);
+        setShowKeyboard(true);
+      } else {
+        throw new Error("응답 데이터에서 사용자 정보를 찾을 수 없습니다.");
       }
     } catch (error) {
       console.error('사용자 데이터 로딩 실패:', error);
@@ -70,10 +72,33 @@ export default function PaymentPasswordChange() {
 
   const handlePinComplete = async (pin) => {
     if (step === 1) {
-      setCurrentPin(pin);
-      setStep(2);
-      setShowKeyboard(false);
-      setTimeout(() => setShowKeyboard(true), 300);
+      try {
+        if (!rsaPublicKey || !currentUserId) {
+          alert("보안 연결 또는 사용자 정보를 확인할 수 없습니다.");
+          return;
+        }
+
+        const payload = {
+          userId: currentUserId,
+          currentPin: pin
+        };
+
+        // 현재 비밀번호 실시간 검증
+        const encryptedPayload = e2eCrypto.encryptPayload(payload, rsaPublicKey);
+        await api.post('/api/payments/password/verify', encryptedPayload);
+
+        setCurrentPin(pin);
+        setStep(2);
+        setShowKeyboard(false);
+        setTimeout(() => setShowKeyboard(true), 300);
+      } catch (err) {
+        console.error("비밀번호 검증 실패:", err);
+        const errMsg = err.response?.data?.message || err.message || "비밀번호가 일치하지 않습니다.";
+        alert(errMsg);
+        
+        setShowKeyboard(false);
+        setTimeout(() => setShowKeyboard(true), 300);
+      }
     } else if (step === 2) {
       if (currentPin === pin) {
         alert("새 비밀번호는 기존 비밀번호와 달라야 합니다.");
@@ -115,12 +140,14 @@ export default function PaymentPasswordChange() {
         navigate(-1);
       } catch (err) {
         console.error("비밀번호 변경 실패:", err);
-        alert(err.response?.data?.message || "비밀번호 변경 중 오류가 발생했습니다.");
+        const errMsg = err.response?.data?.message || err.message || "비밀번호 변경 중 오류가 발생했습니다.";
+        alert(errMsg);
+        
         setStep(1);
         setCurrentPin("");
         setNewPin("");
-      } finally {
         setShowKeyboard(false);
+        setTimeout(() => setShowKeyboard(true), 300);
       }
     }
   };
@@ -143,13 +170,9 @@ export default function PaymentPasswordChange() {
               </button>
             </div>
           ) : (
-            <button 
-              className="btn btn-primary"
-              style={{ padding: '14px 32px', fontSize: '1.1rem' }}
-              onClick={() => { setStep(1); setShowKeyboard(true); }}
-            >
-              비밀번호 변경 시작하기
-            </button>
+            <p style={{ color: '#3182f6', fontWeight: 'bold' }}>
+              화면 하단의 키보드를 통해 비밀번호를 입력해주세요.
+            </p>
           )}
         </section>
       </div>
@@ -157,7 +180,7 @@ export default function PaymentPasswordChange() {
       {showKeyboard && (
         <VirtualKeyboard 
           title={getKeyboardTitle()}
-          onClose={() => setShowKeyboard(false)}
+          onClose={() => navigate(-1)}
           onComplete={handlePinComplete}
         />
       )}
