@@ -46,12 +46,14 @@ export default function PaymentPasswordSetup() {
 
     try {
       const userInfoRes = await api.get('/api/users/me');
-      const responseData = userInfoRes.data ? userInfoRes.data : userInfoRes;
-      const result = responseData.result;
+      const result = userInfoRes?.result || userInfoRes?.data?.result || userInfoRes;
 
-      if (result) {
+      if (result && result.userId) {
         setCurrentUserId(result.userId);
-        setHasPassword(result.hasPaymentPassword);
+        const isPasswordSet = result.hasPaymentPassword === true || result.hasPaymentPassword === 'true';
+        setHasPassword(isPasswordSet);
+      } else {
+        throw new Error("응답 데이터에서 사용자 정보를 찾을 수 없습니다.");
       }
     } catch (error) {
       console.error('사용자 데이터 로딩 실패:', error);
