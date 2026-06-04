@@ -38,6 +38,7 @@ import BookingDetail from './pages/BookingDetail';
 import AIChatbot from './components/AIChatbot';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentPasswordSetup from './pages/PaymentPasswordSetup';
+import PaymentPasswordChange from './pages/PaymentPasswordChange';
 
 export default function App() {
 
@@ -189,6 +190,18 @@ export default function App() {
               element={
                 user ? (
                   <PaymentPasswordSetup />
+                ) : (
+                  <Navigate to="/login" />
+                )
+              }
+            />
+
+            {/* 결제 비밀번호 변경 */}
+            <Route
+              path="/mypage/payment-password-change"
+              element={
+                user ? (
+                  <PaymentPasswordChange />
                 ) : (
                   <Navigate to="/login" />
                 )

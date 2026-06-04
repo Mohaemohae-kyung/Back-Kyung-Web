@@ -1,37 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import e2eCrypto from '../utils/e2eCrypto';
 import { api } from '../api/client';
-import { Page, Stat } from '../components/common';
+import { Page } from '../components/common';
 import VirtualKeyboard from '../components/VirtualKeyboard';
 import { ShieldCheck } from 'lucide-react';
 import './PaymentPasswordSetup.css';
 
-export default function PaymentPasswordSetup() {
+export default function PaymentPasswordChange() {
   const [showKeyboard, setShowKeyboard] = useState(false);
-  const [step, setStep] = useState(1); // 1: set, 2: confirm
-  const [firstPin, setFirstPin] = useState("");
-  const [rsaPublicKey, setRsaPublicKey] = useState(null);
-  const [loadingKey, setLoadingKey] = useState(true);
-  const [keyError, setKeyError] = useState(false);
+  const [step, setStep] = useState(1); 
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
   
-  const [hasPassword, setHasPassword] = useState(false);
+  const [rsaPublicKey, setRsaPublicKey] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [keyError, setKeyError] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   
   const navigate = useNavigate();
 
   const initializeData = async () => {
-    setLoadingKey(true);
+    setLoading(true);
     setKeyError(false);
 
     try {
       const res = await api.get(`/api/payments/public-key?t=${Date.now()}`);
-      
       let pubKey = res?.publicKey || res?.data?.publicKey || res;
       if (typeof pubKey === 'object' && pubKey.publicKey) {
         pubKey = pubKey.publicKey;
       }
-      
       if (typeof pubKey === 'string' && pubKey.includes('BEGIN PUBLIC KEY')) {
         setRsaPublicKey(pubKey);
       } else {
@@ -40,7 +38,7 @@ export default function PaymentPasswordSetup() {
     } catch (error) {
       console.error('공개키 로딩 실패:', error);
       setKeyError(true);
-      setLoadingKey(false);
+      setLoading(false);
       return; 
     }
 
@@ -51,61 +49,76 @@ export default function PaymentPasswordSetup() {
 
       if (result) {
         setCurrentUserId(result.userId);
-        setHasPassword(result.hasPaymentPassword);
       }
     } catch (error) {
       console.error('사용자 데이터 로딩 실패:', error);
       setKeyError(true);
     } finally {
-      setLoadingKey(false);
+      setLoading(false);
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     initializeData();
   }, []);
 
+  const getKeyboardTitle = () => {
+    if (step === 1) return "현재 결제 비밀번호 입력";
+    if (step === 2) return "새 결제 비밀번호 6자리 입력";
+    return "새 결제 비밀번호 다시 한 번 입력";
+  };
+
   const handlePinComplete = async (pin) => {
     if (step === 1) {
-      setFirstPin(pin);
+      setCurrentPin(pin);
       setStep(2);
       setShowKeyboard(false);
-      setTimeout(() => setShowKeyboard(true), 300); // Re-open for confirm
-    } else {
-      if (pin !== firstPin) {
-        alert("비밀번호가 일치하지 않습니다. 처음부터 다시 시도해주세요.");
-        setStep(1);
-        setFirstPin("");
+      setTimeout(() => setShowKeyboard(true), 300);
+    } else if (step === 2) {
+      if (currentPin === pin) {
+        alert("새 비밀번호는 기존 비밀번호와 달라야 합니다.");
+        setStep(2);
         setShowKeyboard(false);
+        setTimeout(() => setShowKeyboard(true), 300);
+        return;
+      }
+      setNewPin(pin);
+      setStep(3);
+      setShowKeyboard(false);
+      setTimeout(() => setShowKeyboard(true), 300);
+    } else {
+      if (pin !== newPin) {
+        alert("새 비밀번호가 일치하지 않습니다.");
+        setStep(2);
+        setNewPin("");
+        setShowKeyboard(false);
+        setTimeout(() => setShowKeyboard(true), 300);
         return;
       }
 
-      // 2번 모두 일치하면 E2E 암호화 후 서버로 전송
       try {
-        if (!rsaPublicKey) {
-            alert("보안 연결(키 교환)이 완료되지 않았습니다. 잠시 후 다시 시도해주세요.");
-            return;
-        }
-
-        if (!currentUserId) {
-            alert("사용자 정보를 확인할 수 없습니다. 페이지를 새로고침 해주세요.");
-            return;
+        if (!rsaPublicKey || !currentUserId) {
+          alert("보안 연결 또는 사용자 정보를 확인할 수 없습니다.");
+          return;
         }
 
         const payload = {
           userId: currentUserId,
-          paymentPin: pin
+          currentPin,
+          newPin: pin
         };
 
         const encryptedPayload = e2eCrypto.encryptPayload(payload, rsaPublicKey);
+        await api.post('/api/payments/password/change', encryptedPayload);
         
-        await api.post('/api/payments/password/setup', encryptedPayload);
-        
-        alert("결제 비밀번호가 성공적으로 설정되었습니다.");
-        navigate(-1); // 이전 페이지로 돌아가기
+        alert("결제 비밀번호가 성공적으로 변경되었습니다.");
+        navigate(-1);
       } catch (err) {
-        console.error("비밀번호 설정 실패:", err);
-        alert("비밀번호 설정 중 오류가 발생했습니다.");
+        console.error("비밀번호 변경 실패:", err);
+        alert(err.response?.data?.message || "비밀번호 변경 중 오류가 발생했습니다.");
+        setStep(1);
+        setCurrentPin("");
+        setNewPin("");
       } finally {
         setShowKeyboard(false);
       }
@@ -113,47 +126,37 @@ export default function PaymentPasswordSetup() {
   };
 
   return (
-    <Page title="결제 비밀번호 설정" desc="안전한 결제를 위해 6자리 비밀번호를 설정해주세요.">
+    <Page title="결제 비밀번호 변경" desc="안전한 결제를 위해 새로운 6자리 비밀번호를 설정해주세요.">
       <div className="mypage-grid">
         <section className="panel" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <ShieldCheck size={48} color="#00c7ae" style={{ marginBottom: '16px' }} />
-          <h2>결제 비밀번호 {hasPassword ? '관리' : '설정'}</h2>
+          <h2>결제 비밀번호 변경</h2>
           <p className="muted" style={{ marginBottom: '30px' }}>E2E 암호화를 통해 고객님의 비밀번호를 안전하게 보호합니다.</p>
           
-          {loadingKey ? (
-            <p style={{ color: '#666' }}>보안 연결 및 상태를 확인하는 중입니다...</p>
+          {loading ? (
+            <p style={{ color: '#666' }}>보안 연결을 설정하는 중입니다...</p>
           ) : keyError ? (
             <div>
-              <p style={{ color: 'red', marginBottom: '12px' }}>보안 연결(키 교환)에 실패했습니다.</p>
+              <p style={{ color: 'red', marginBottom: '12px' }}>보안 연결에 실패했습니다.</p>
               <button className="btn btn-outline" onClick={initializeData}>
                 다시 시도
               </button>
             </div>
           ) : (
-            hasPassword ? (
-              <button 
-                className="btn btn-primary"
-                style={{ padding: '14px 32px', fontSize: '1.1rem' }}
-                onClick={() => navigate('/mypage/payment-password-change')}
-              >
-                비밀번호 변경
-              </button>
-            ) : (
-              <button 
-                className="btn btn-primary"
-                style={{ padding: '14px 32px', fontSize: '1.1rem' }}
-                onClick={() => { setStep(1); setShowKeyboard(true); }}
-              >
-                비밀번호 {step === 1 ? '입력' : '재입력'} 하기
-              </button>
-            )
+            <button 
+              className="btn btn-primary"
+              style={{ padding: '14px 32px', fontSize: '1.1rem' }}
+              onClick={() => { setStep(1); setShowKeyboard(true); }}
+            >
+              비밀번호 변경 시작하기
+            </button>
           )}
         </section>
       </div>
 
       {showKeyboard && (
         <VirtualKeyboard 
-          title={step === 1 ? "새 결제 비밀번호 6자리 입력" : "비밀번호 다시 한 번 입력"}
+          title={getKeyboardTitle()}
           onClose={() => setShowKeyboard(false)}
           onComplete={handlePinComplete}
         />
